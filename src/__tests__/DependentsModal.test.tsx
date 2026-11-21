@@ -58,7 +58,7 @@ describe('SpouseSection', () => {
       isClaimedAsDependent: true,
       healthInsurance: 'auto',
       isHouseholdHead: false,
-      paysNationalPension: false,
+      taxpayerPaysNationalPension: false,
     });
 
     // External prop update from null -> spouse -> null reflects directly without stale local state

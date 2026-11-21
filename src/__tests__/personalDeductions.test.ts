@@ -139,7 +139,7 @@ describe('getPersonalCircumstanceWarnings', () => {
       isClaimedAsDependent: true,
       healthInsurance: 'auto',
       isHouseholdHead: false,
-      paysNationalPension: false,
+      taxpayerPaysNationalPension: false,
       ...patch,
     }) as Dependent;
 

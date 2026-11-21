@@ -230,10 +230,16 @@ export function calculatePensionPremium(
  * Returns 0 outside the statutory 20–59 age band, when unpaid, or for non-positive/non-finite custom entries.
  */
 export function getEffectiveFamilyNationalPensionAmount(
-  member: Pick<Dependent, 'ageRange' | 'paysNationalPension' | 'nationalPensionCustomAmount'>,
+  member: Pick<
+    Dependent,
+    'ageRange' | 'taxpayerPaysNationalPension' | 'nationalPensionCustomAmount'
+  >,
   year: number,
 ): number {
-  if (!member.paysNationalPension || !isDependentSubjectToNationalPension(member.ageRange)) {
+  if (
+    !member.taxpayerPaysNationalPension ||
+    !isDependentSubjectToNationalPension(member.ageRange)
+  ) {
     return 0;
   }
   if (member.nationalPensionCustomAmount === undefined) {
@@ -246,7 +252,7 @@ export function getEffectiveFamilyNationalPensionAmount(
 /**
  * Calculates National Pension (国民年金) contributions paid by the taxpayer on behalf of
  * family members sharing living expenses (生計を一にする配偶者その他の親族, 所得税法第74条第2項第1号).
- * Only dependents aged 20–59 with `paysNationalPension: true` contribute; stale flags outside
+ * Only dependents aged 20–59 with `taxpayerPaysNationalPension: true` contribute; stale flags outside
  * 20–59 are ignored.
  */
 export function calculateFamilyNationalPension(

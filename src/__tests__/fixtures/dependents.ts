@@ -23,7 +23,7 @@ export const makeSpouse = (overrides: Partial<Spouse> = {}): Spouse => ({
   isClaimedAsDependent: true,
   healthInsurance: 'auto',
   isHouseholdHead: false,
-  paysNationalPension: false,
+  taxpayerPaysNationalPension: false,
   ...overrides,
 });
 
@@ -41,7 +41,7 @@ export const makeDependent = (overrides: Partial<OtherDependent> = {}): OtherDep
   isClaimedAsDependent: true,
   healthInsurance: 'auto',
   isHouseholdHead: false,
-  paysNationalPension: false,
+  taxpayerPaysNationalPension: false,
   ...overrides,
 });
 

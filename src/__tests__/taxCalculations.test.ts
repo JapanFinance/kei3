@@ -6818,11 +6818,11 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
 
       const withoutPension = calculateTaxes({
         ...baseSalariedParent,
-        dependents: [{ ...studentBase, paysNationalPension: false }],
+        dependents: [{ ...studentBase, taxpayerPaysNationalPension: false }],
       });
       const withPension = calculateTaxes({
         ...baseSalariedParent,
-        dependents: [{ ...studentBase, paysNationalPension: true }],
+        dependents: [{ ...studentBase, taxpayerPaysNationalPension: true }],
       });
 
       expect(withoutPension.familyNationalPension).toBeUndefined();
@@ -6869,7 +6869,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         ageRange: '20to22',
         isClaimedAsDependent: false, // e.g. claimed by the other parent
         isSameHousehold: false,
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
       });
 
       const baseline = calculateTaxes(baseSalariedParent);
@@ -6891,13 +6891,13 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         id: 'turning-20',
         relationship: 'child',
         ageRange: '20to22',
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
         nationalPensionCustomAmount: 107_520, // 6 months * 17,920
       });
       const zeroCustomSpouse = makeSpouse({
         id: 'spouse-zero',
         ageRange: '20to39',
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
         nationalPensionCustomAmount: 0,
       });
 
@@ -6912,18 +6912,18 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       ]);
     });
 
-    it('ignores stale paysNationalPension: true outside the 20–59 statutory band', () => {
+    it('ignores stale taxpayerPaysNationalPension: true outside the 20–59 statutory band', () => {
       const result = calculateTaxes({
         ...baseSalariedParent,
         dependents: [
-          makeSpouse({ id: 's-under20', ageRange: 'under20', paysNationalPension: true }),
-          makeDependent({ id: 'd-19', ageRange: '19', paysNationalPension: true }),
-          makeDependent({ id: 'd-60to64', ageRange: '60to64', paysNationalPension: true }),
+          makeSpouse({ id: 's-under20', ageRange: 'under20', taxpayerPaysNationalPension: true }),
+          makeDependent({ id: 'd-19', ageRange: '19', taxpayerPaysNationalPension: true }),
+          makeDependent({ id: 'd-60to64', ageRange: '60to64', taxpayerPaysNationalPension: true }),
           makeDependent({
             id: 'd-70to74',
             relationship: 'parent',
             ageRange: '70to74',
-            paysNationalPension: true,
+            taxpayerPaysNationalPension: true,
           }),
         ],
       });
@@ -6944,7 +6944,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           makeSpouse({
             id: 'spouse-np',
             ageRange: '20to39',
-            paysNationalPension: true,
+            taxpayerPaysNationalPension: true,
           }),
         ],
         dcPlanContributions: 0,

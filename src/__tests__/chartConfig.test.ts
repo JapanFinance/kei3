@@ -521,12 +521,12 @@ describe('generateChartData with household National Health Insurance', () => {
       relationship: 'child',
       ageRange: '20to22',
       isSameHousehold: false,
-      paysNationalPension: true,
+      taxpayerPaysNationalPension: true,
     });
 
     const baselineChart = generateChartData(range, {
       ...context,
-      dependents: [{ ...student, paysNationalPension: false }],
+      dependents: [{ ...student, taxpayerPaysNationalPension: false }],
     });
     const familyPensionChart = generateChartData(range, { ...context, dependents: [student] });
 

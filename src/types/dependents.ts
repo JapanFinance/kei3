@@ -293,7 +293,7 @@ export interface Spouse {
    * Requires neither cohabitation (isSameHousehold) nor claiming a dependent deduction
    * (isClaimedAsDependent) — only 生計を一にする. Ignored outside ages 20–59.
    */
-  paysNationalPension: boolean;
+  taxpayerPaysNationalPension: boolean;
 
   /**
    * Optional custom annual yen amount paid for this family member's National Pension
@@ -359,7 +359,7 @@ export interface OtherDependent {
    * Requires neither cohabitation (isSameHousehold) nor claiming a dependent deduction
    * (isClaimedAsDependent) — only 生計を一にする. Ignored outside ages 20–59.
    */
-  paysNationalPension: boolean;
+  taxpayerPaysNationalPension: boolean;
 
   /**
    * Optional custom annual yen amount paid for this family member's National Pension

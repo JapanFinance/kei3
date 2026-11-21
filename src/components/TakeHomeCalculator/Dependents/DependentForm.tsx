@@ -107,8 +107,8 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   const [isHouseholdHead, setIsHouseholdHead] = useState<boolean>(
     dependent?.isHouseholdHead ?? false,
   );
-  const [paysNationalPension, setPaysNationalPension] = useState<boolean>(
-    dependent?.paysNationalPension ?? false,
+  const [taxpayerPaysNationalPension, setTaxpayerPaysNationalPension] = useState<boolean>(
+    dependent?.taxpayerPaysNationalPension ?? false,
   );
   const [nationalPensionCustomAmount, setNationalPensionCustomAmount] = useState<
     number | undefined
@@ -125,7 +125,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       isClaimedAsDependent,
       healthInsurance,
       isHouseholdHead,
-      paysNationalPension,
+      taxpayerPaysNationalPension,
       ...(nationalPensionCustomAmount !== undefined && { nationalPensionCustomAmount }),
     };
 
@@ -135,18 +135,18 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   const hasIncomeOrHouseholdImpact = isClaimedAsDependent || isSameHousehold;
   const isEligibleForNP = isDependentSubjectToNationalPension(ageRange);
   const effectiveNationalPension = getEffectiveFamilyNationalPensionAmount(
-    { ageRange, paysNationalPension, nationalPensionCustomAmount },
+    { ageRange, taxpayerPaysNationalPension, nationalPensionCustomAmount },
     incomeYear,
   );
   const hasAnyImpact = hasIncomeOrHouseholdImpact || effectiveNationalPension > 0;
 
   const nationalPensionCard = isEligibleForNP ? (
     <NationalPensionPaymentCard
-      paysNationalPension={paysNationalPension}
+      taxpayerPaysNationalPension={taxpayerPaysNationalPension}
       customAmount={nationalPensionCustomAmount}
       incomeYear={incomeYear}
       onChange={updates => {
-        setPaysNationalPension(updates.paysNationalPension);
+        setTaxpayerPaysNationalPension(updates.taxpayerPaysNationalPension);
         setNationalPensionCustomAmount(updates.nationalPensionCustomAmount);
       }}
     />
@@ -683,7 +683,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                         isClaimedAsDependent,
                         healthInsurance,
                         isHouseholdHead,
-                        paysNationalPension,
+                        taxpayerPaysNationalPension,
                       };
 
                       // Calculate all deductions for this dependent

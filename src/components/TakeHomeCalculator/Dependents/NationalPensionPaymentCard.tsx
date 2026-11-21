@@ -19,11 +19,11 @@ import { DetailedTooltip } from '../../ui/Tooltips';
 interface NationalPensionPaymentCardProps {
   /** Whether the family member is a spouse (adjusts Category 3 vs Category 1 guidance). */
   isSpouse?: boolean | undefined;
-  paysNationalPension: boolean;
+  taxpayerPaysNationalPension: boolean;
   customAmount?: number | undefined;
   incomeYear: number;
   onChange: (updates: {
-    paysNationalPension: boolean;
+    taxpayerPaysNationalPension: boolean;
     nationalPensionCustomAmount?: number | undefined;
   }) => void;
 }
@@ -34,7 +34,7 @@ interface NationalPensionPaymentCardProps {
  */
 export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProps> = ({
   isSpouse = false,
-  paysNationalPension,
+  taxpayerPaysNationalPension,
   customAmount,
   incomeYear,
   onChange,
@@ -46,14 +46,14 @@ export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProp
 
   const handleTogglePaid = (checked: boolean) => {
     onChange({
-      paysNationalPension: checked,
+      taxpayerPaysNationalPension: checked,
       nationalPensionCustomAmount: customAmount,
     });
   };
 
   const handleToggleCustom = (checked: boolean) => {
     onChange({
-      paysNationalPension,
+      taxpayerPaysNationalPension,
       nationalPensionCustomAmount: checked ? (savedCustomAmount ?? statutoryTotal) : undefined,
     });
   };
@@ -62,7 +62,7 @@ export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProp
     if (!isCustom) return;
     setSavedCustomAmount(value);
     onChange({
-      paysNationalPension,
+      taxpayerPaysNationalPension,
       nationalPensionCustomAmount: value,
     });
   };
@@ -144,7 +144,7 @@ export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProp
         <FormControlLabel
           control={
             <Switch
-              checked={paysNationalPension}
+              checked={taxpayerPaysNationalPension}
               onChange={e => handleTogglePaid(e.target.checked)}
               size="small"
             />
@@ -153,7 +153,7 @@ export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProp
           sx={{ m: 0, flexShrink: 0 }}
         />
 
-        {paysNationalPension && (
+        {taxpayerPaysNationalPension && (
           <Box sx={{ flex: 1, minWidth: 0, maxWidth: { sm: 460 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <SpinnerNumberField

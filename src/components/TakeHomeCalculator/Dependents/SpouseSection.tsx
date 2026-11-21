@@ -90,7 +90,7 @@ export default function SpouseSection({
         isClaimedAsDependent: true,
         healthInsurance: 'auto',
         isHouseholdHead: false,
-        paysNationalPension: false,
+        taxpayerPaysNationalPension: false,
       };
       onChange(newSpouse);
     } else {
@@ -129,7 +129,7 @@ export default function SpouseSection({
     spouse && isEligibleForNP ? (
       <NationalPensionPaymentCard
         isSpouse
-        paysNationalPension={spouse.paysNationalPension}
+        taxpayerPaysNationalPension={spouse.taxpayerPaysNationalPension}
         customAmount={spouse.nationalPensionCustomAmount}
         incomeYear={incomeYear}
         onChange={updates => handleSpouseChange(updates)}

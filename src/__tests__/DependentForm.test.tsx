@@ -156,7 +156,7 @@ describe('DependentForm National Pension payment controls', () => {
         ageRange: '20to22',
         isClaimedAsDependent: false,
         isSameHousehold: false,
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
       }),
     );
     expect(onSave.mock.lastCall?.[0]).not.toHaveProperty('nationalPensionCustomAmount');
@@ -172,7 +172,7 @@ describe('DependentForm National Pension payment controls', () => {
     expect(onSave).toHaveBeenLastCalledWith(
       expect.objectContaining({
         id: 'student-1',
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
         nationalPensionCustomAmount: 107520,
       }),
     );
@@ -236,7 +236,7 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
             ageRange: '20to22',
             isClaimedAsDependent: false,
             isSameHousehold: false,
-            paysNationalPension: true,
+            taxpayerPaysNationalPension: true,
           }),
         ]}
         onDependentsChange={vi.fn()}
@@ -261,7 +261,7 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
       ageRange: '20to22',
       isClaimedAsDependent: false,
       isSameHousehold: false,
-      paysNationalPension: true,
+      taxpayerPaysNationalPension: true,
       nationalPensionCustomAmount: 0,
     });
 
@@ -301,7 +301,7 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
     const spouse = makeSpouse({
       ageRange: '20to39',
       isClaimedAsDependent: true,
-      paysNationalPension: true,
+      taxpayerPaysNationalPension: true,
     });
 
     const { rerender } = render(
@@ -316,7 +316,7 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
 
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
         nationalPensionCustomAmount: 213_810,
       }),
     );
@@ -369,7 +369,7 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
           id: 'student-preserve',
           relationship: 'child',
           ageRange: '20to22',
-          paysNationalPension: true,
+          taxpayerPaysNationalPension: true,
         })}
         onSave={onSave}
         onCancel={vi.fn()}
@@ -404,7 +404,7 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
     await user.click(screen.getByRole('button', { name: /Update Dependent/ }));
     expect(onSave).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
         nationalPensionCustomAmount: 120_000,
       }),
     );
@@ -417,7 +417,7 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
       ageRange: '20to22',
       isClaimedAsDependent: false,
       isSameHousehold: false,
-      paysNationalPension: true,
+      taxpayerPaysNationalPension: true,
     });
 
     render(
@@ -440,13 +440,13 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
       ageRange: '20to22',
       isClaimedAsDependent: false,
       isSameHousehold: false,
-      paysNationalPension: true,
+      taxpayerPaysNationalPension: true,
     });
     const claimedSpouse = makeSpouse({
       id: 'spouse-deduction',
       ageRange: '20to39',
       isClaimedAsDependent: true,
-      paysNationalPension: true,
+      taxpayerPaysNationalPension: true,
       nationalPensionCustomAmount: 100_000,
     });
 

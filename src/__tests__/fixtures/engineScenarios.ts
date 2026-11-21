@@ -63,7 +63,7 @@ export const ENGINE_SCENARIOS = {
           isClaimedAsDependent: true,
           healthInsurance: 'auto',
           isHouseholdHead: false,
-          paysNationalPension: false,
+          taxpayerPaysNationalPension: false,
         },
         {
           id: 'child',
@@ -75,7 +75,7 @@ export const ENGINE_SCENARIOS = {
           isClaimedAsDependent: true,
           healthInsurance: 'auto',
           isHouseholdHead: false,
-          paysNationalPension: false,
+          taxpayerPaysNationalPension: false,
         },
       ],
     },

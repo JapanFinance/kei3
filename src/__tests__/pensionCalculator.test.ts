@@ -208,7 +208,11 @@ describe('National Pension full exemption (全額免除)', () => {
 
 describe('family National Pension contributions', () => {
   it('returns statutory full-year amount for 20-59 members when paid without custom amount', () => {
-    const member = makeDependent({ id: 'c1', ageRange: '20to22', paysNationalPension: true });
+    const member = makeDependent({
+      id: 'c1',
+      ageRange: '20to22',
+      taxpayerPaysNationalPension: true,
+    });
 
     const amount = getEffectiveFamilyNationalPensionAmount(member, TEST_INCOME_YEAR);
 
@@ -218,25 +222,17 @@ describe('family National Pension contributions', () => {
   it('rounds positive custom amounts and clamps zero, negative, or non-finite values to zero', () => {
     expect(
       getEffectiveFamilyNationalPensionAmount(
-        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: 107_520.6 },
+        {
+          ageRange: '20to39',
+          taxpayerPaysNationalPension: true,
+          nationalPensionCustomAmount: 107_520.6,
+        },
         TEST_INCOME_YEAR,
       ),
     ).toBe(107_521);
     expect(
       getEffectiveFamilyNationalPensionAmount(
-        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: 0 },
-        TEST_INCOME_YEAR,
-      ),
-    ).toBe(0);
-    expect(
-      getEffectiveFamilyNationalPensionAmount(
-        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: -500 },
-        TEST_INCOME_YEAR,
-      ),
-    ).toBe(0);
-    expect(
-      getEffectiveFamilyNationalPensionAmount(
-        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: Number.NaN },
+        { ageRange: '20to39', taxpayerPaysNationalPension: true, nationalPensionCustomAmount: 0 },
         TEST_INCOME_YEAR,
       ),
     ).toBe(0);
@@ -244,7 +240,27 @@ describe('family National Pension contributions', () => {
       getEffectiveFamilyNationalPensionAmount(
         {
           ageRange: '20to39',
-          paysNationalPension: true,
+          taxpayerPaysNationalPension: true,
+          nationalPensionCustomAmount: -500,
+        },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        {
+          ageRange: '20to39',
+          taxpayerPaysNationalPension: true,
+          nationalPensionCustomAmount: Number.NaN,
+        },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        {
+          ageRange: '20to39',
+          taxpayerPaysNationalPension: true,
           nationalPensionCustomAmount: Number.POSITIVE_INFINITY,
         },
         TEST_INCOME_YEAR,
@@ -255,13 +271,17 @@ describe('family National Pension contributions', () => {
   it('returns zero outside the 20-59 statutory band even when flagged paid', () => {
     expect(
       getEffectiveFamilyNationalPensionAmount(
-        { ageRange: '19', paysNationalPension: true },
+        { ageRange: '19', taxpayerPaysNationalPension: true },
         TEST_INCOME_YEAR,
       ),
     ).toBe(0);
     expect(
       getEffectiveFamilyNationalPensionAmount(
-        { ageRange: '60to64', paysNationalPension: true, nationalPensionCustomAmount: 100_000 },
+        {
+          ageRange: '60to64',
+          taxpayerPaysNationalPension: true,
+          nationalPensionCustomAmount: 100_000,
+        },
         TEST_INCOME_YEAR,
       ),
     ).toBe(0);
@@ -269,17 +289,17 @@ describe('family National Pension contributions', () => {
 
   it('sums positive member contributions and omits zero or non-finite entries from breakdown', () => {
     const dependents = [
-      makeSpouse({ id: 'spouse', ageRange: '20to39', paysNationalPension: true }),
+      makeSpouse({ id: 'spouse', ageRange: '20to39', taxpayerPaysNationalPension: true }),
       makeDependent({
         id: 'child-zero',
         ageRange: '20to22',
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
         nationalPensionCustomAmount: 0,
       }),
       makeDependent({
         id: 'child-nan',
         ageRange: '20to22',
-        paysNationalPension: true,
+        taxpayerPaysNationalPension: true,
         nationalPensionCustomAmount: Number.NaN,
       }),
     ];
