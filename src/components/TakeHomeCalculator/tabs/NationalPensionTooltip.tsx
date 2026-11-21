@@ -100,7 +100,7 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({
           })}
           <tr>
             <td colSpan={2} style={totalStyle}>
-              Annual Total
+              {familyDeduction ? 'Annual Total (per person)' : 'Annual Total'}
             </td>
             <td style={totalStyle}>{formatJPY(annualTotal)}</td>
           </tr>

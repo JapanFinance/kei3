@@ -570,8 +570,6 @@ export default function SpouseSection({
                       </Box>
                     )}
 
-                    {nationalPensionCard}
-
                     {/* Disability Status */}
                     {spouse.isClaimedAsDependent && (
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -617,6 +615,8 @@ export default function SpouseSection({
                   </Box>
                 )}
               </Box>
+
+              {nationalPensionCard}
             </>
           )}
         </Box>

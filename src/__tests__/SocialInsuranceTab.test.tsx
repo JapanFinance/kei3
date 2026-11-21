@@ -1050,5 +1050,17 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
     expect(resultRowText('Annual Social Insurance')).toContain(
       `¥${(results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0) + 321_330).toLocaleString('en-US')}`,
     );
+
+    const tooltipTexts = screen
+      .getAllByTestId('detail-info-tooltip-content')
+      .map(node => node.textContent ?? '')
+      .join('\n');
+    expect(tooltipTexts).toContain('Annual Total (per person)');
+    expect(tooltipTexts).toContain('100% deductible under the Social Insurance Deduction');
+    expect(
+      screen.getByRole('link', {
+        name: /NTA: Social Insurance Deduction \(国税庁: 社会保険料控除 No\.1130\)/,
+      }),
+    ).toHaveAttribute('href', 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1130.htm');
   });
 });

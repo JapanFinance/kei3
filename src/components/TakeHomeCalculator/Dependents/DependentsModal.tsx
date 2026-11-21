@@ -554,155 +554,139 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               </Box>
             )}
 
-            {/* Deduction Summary */}
-            {(spouse || otherDependents.length > 0) && (
-              <Box>
-                <Divider sx={{ my: { xs: 1.5, sm: 2.5 } }} />
-                <Typography variant="h6" gutterBottom>
-                  Total Deductions Summary
-                </Typography>
-                <Paper
-                  variant="outlined"
-                  sx={{ border: { xs: 'none', sm: '1px solid' }, borderColor: { sm: 'divider' } }}
-                >
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Deduction Type</TableCell>
-                        <TableCell align="center">Count</TableCell>
-                        <TableCell align="right">Income Tax</TableCell>
-                        <TableCell align="right">Residence Tax</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(() => {
-                        const allDependents: Dependent[] = [
-                          ...(spouse ? [spouse] : []),
-                          ...otherDependents,
-                        ];
+            {/* Dependent Deductions Summary */}
+            {(() => {
+              const allDependents: Dependent[] = [...(spouse ? [spouse] : []), ...otherDependents];
+              if (allDependents.length === 0) {
+                return null;
+              }
 
-                        if (allDependents.length === 0) {
-                          return (
-                            <TableRow>
-                              <TableCell colSpan={4} align="center">
-                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                  No dependents added
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        }
+              const deductionResults = calculateDependentDeductions(
+                allDependents,
+                incomeYear,
+                taxpayerNetIncome,
+              );
 
-                        const deductionResults = calculateDependentDeductions(
-                          allDependents,
-                          incomeYear,
-                          taxpayerNetIncome,
-                        );
+              // Group deductions by type and amount
+              interface DeductionGroup {
+                type: string;
+                natAmount: number;
+                resAmount: number;
+                count: number;
+              }
 
-                        // Group deductions by type and amount
-                        interface DeductionGroup {
-                          type: string;
-                          natAmount: number;
-                          resAmount: number;
-                          count: number;
-                        }
+              const deductionMap = new Map<string, DeductionGroup>();
 
-                        const deductionMap = new Map<string, DeductionGroup>();
+              // Process each breakdown
+              deductionResults.breakdown.forEach((breakdown: DependentDeductionBreakdown) => {
+                // Skip if not eligible
+                if (breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE) {
+                  return;
+                }
 
-                        // Process each breakdown
-                        deductionResults.breakdown.forEach(
-                          (breakdown: DependentDeductionBreakdown) => {
-                            // Skip if not eligible
-                            if (breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE) {
-                              return;
-                            }
+                const key = `${breakdown.deductionType}-${breakdown.nationalTaxAmount}-${breakdown.residenceTaxAmount}`;
+                const existing = deductionMap.get(key);
 
-                            const key = `${breakdown.deductionType}-${breakdown.nationalTaxAmount}-${breakdown.residenceTaxAmount}`;
-                            const existing = deductionMap.get(key);
+                if (existing) {
+                  existing.count++;
+                } else {
+                  deductionMap.set(key, {
+                    type: breakdown.deductionType,
+                    natAmount: breakdown.nationalTaxAmount,
+                    resAmount: breakdown.residenceTaxAmount,
+                    count: 1,
+                  });
+                }
+              });
 
-                            if (existing) {
-                              existing.count++;
-                            } else {
-                              deductionMap.set(key, {
-                                type: breakdown.deductionType,
-                                natAmount: breakdown.nationalTaxAmount,
-                                resAmount: breakdown.residenceTaxAmount,
-                                count: 1,
-                              });
-                            }
-                          },
-                        );
+              // Convert to array and sort
+              const deductionGroups = Array.from(deductionMap.values()).sort((a, b) => {
+                // Sort by total amount descending
+                return b.natAmount + b.resAmount - (a.natAmount + a.resAmount);
+              });
 
-                        // Convert to array and sort
-                        const deductionGroups = Array.from(deductionMap.values()).sort((a, b) => {
-                          // Sort by total amount descending
-                          return b.natAmount + b.resAmount - (a.natAmount + a.resAmount);
-                        });
+              if (deductionGroups.length === 0) {
+                return null;
+              }
 
-                        const rows: React.ReactNode[] = [];
-                        let totalNat = 0;
-                        let totalRes = 0;
+              let totalNat = 0;
+              let totalRes = 0;
 
-                        // Add row for each deduction group
-                        deductionGroups.forEach((group, index) => {
-                          totalNat += group.natAmount * group.count;
-                          totalRes += group.resAmount * group.count;
+              const rows = deductionGroups.map((group, index) => {
+                totalNat += group.natAmount * group.count;
+                totalRes += group.resAmount * group.count;
 
-                          rows.push(
-                            <TableRow key={`deduction-${index}`}>
-                              <TableCell>{group.type}</TableCell>
-                              <TableCell align="center">{group.count}</TableCell>
-                              <TableCell align="right">
-                                {formatJPY(group.natAmount)}
-                                {group.count > 1 && (
-                                  <Typography
-                                    variant="caption"
-                                    sx={{ color: 'text.secondary', display: 'block' }}
-                                  >
-                                    = {formatJPY(group.natAmount * group.count)}
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell align="right">
-                                {formatJPY(group.resAmount)}
-                                {group.count > 1 && (
-                                  <Typography
-                                    variant="caption"
-                                    sx={{ color: 'text.secondary', display: 'block' }}
-                                  >
-                                    = {formatJPY(group.resAmount * group.count)}
-                                  </Typography>
-                                )}
-                              </TableCell>
-                            </TableRow>,
-                          );
-                        });
+                return (
+                  <TableRow key={`deduction-${index}`}>
+                    <TableCell>{group.type}</TableCell>
+                    <TableCell align="center">{group.count}</TableCell>
+                    <TableCell align="right">
+                      {formatJPY(group.natAmount)}
+                      {group.count > 1 && (
+                        <Typography
+                          variant="caption"
+                          sx={{ color: 'text.secondary', display: 'block' }}
+                        >
+                          = {formatJPY(group.natAmount * group.count)}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {formatJPY(group.resAmount)}
+                      {group.count > 1 && (
+                        <Typography
+                          variant="caption"
+                          sx={{ color: 'text.secondary', display: 'block' }}
+                        >
+                          = {formatJPY(group.resAmount * group.count)}
+                        </Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              });
 
-                        // Add total row
-                        rows.push(
-                          <TableRow
-                            key="total"
-                            sx={{ backgroundColor: 'action.hover', fontWeight: 'bold' }}
-                          >
-                            <TableCell colSpan={2}>
-                              <strong>Total</strong>
-                            </TableCell>
-                            <TableCell align="right">
-                              <strong>{formatJPY(totalNat)}</strong>
-                            </TableCell>
-                            <TableCell align="right">
-                              <strong>{formatJPY(totalRes)}</strong>
-                            </TableCell>
-                          </TableRow>,
-                        );
-
-                        return rows;
-                      })()}
-                    </TableBody>
-                  </Table>
-                </Paper>
-              </Box>
-            )}
+              return (
+                <Box>
+                  <Divider sx={{ my: { xs: 1.5, sm: 2.5 } }} />
+                  <Typography variant="h6" gutterBottom>
+                    Dependent Deductions Summary
+                  </Typography>
+                  <Paper
+                    variant="outlined"
+                    sx={{ border: { xs: 'none', sm: '1px solid' }, borderColor: { sm: 'divider' } }}
+                  >
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Deduction Type</TableCell>
+                          <TableCell align="center">Count</TableCell>
+                          <TableCell align="right">Income Tax</TableCell>
+                          <TableCell align="right">Residence Tax</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {rows}
+                        <TableRow
+                          key="total"
+                          sx={{ backgroundColor: 'action.hover', fontWeight: 'bold' }}
+                        >
+                          <TableCell colSpan={2}>
+                            <strong>Total</strong>
+                          </TableCell>
+                          <TableCell align="right">
+                            <strong>{formatJPY(totalNat)}</strong>
+                          </TableCell>
+                          <TableCell align="right">
+                            <strong>{formatJPY(totalRes)}</strong>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                </Box>
+              );
+            })()}
           </Box>
         )}
       </DialogContent>

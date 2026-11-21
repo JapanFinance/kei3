@@ -134,12 +134,11 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   const hasIncomeOrHouseholdImpact = isClaimedAsDependent || isSameHousehold;
   const isEligibleForNP = isDependentSubjectToNationalPension(ageRange);
-  const hasAnyImpact =
-    hasIncomeOrHouseholdImpact ||
-    getEffectiveFamilyNationalPensionAmount(
-      { ageRange, paysNationalPension, nationalPensionCustomAmount },
-      incomeYear,
-    ) > 0;
+  const effectiveNationalPension = getEffectiveFamilyNationalPensionAmount(
+    { ageRange, paysNationalPension, nationalPensionCustomAmount },
+    incomeYear,
+  );
+  const hasAnyImpact = hasIncomeOrHouseholdImpact || effectiveNationalPension > 0;
 
   const nationalPensionCard = isEligibleForNP ? (
     <NationalPensionPaymentCard
@@ -610,8 +609,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   </Box>
                 )}
 
-                {nationalPensionCard}
-
                 {/* Disability Status */}
                 {isClaimedAsDependent && (
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -656,6 +653,8 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               </Box>
             )}
           </Box>
+
+          {nationalPensionCard}
 
           {/* Eligible Deductions Table */}
           {isClaimedAsDependent && (

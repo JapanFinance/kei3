@@ -135,8 +135,10 @@ export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProp
           p: 1.5,
           backgroundColor: 'background.default',
           display: 'flex',
-          flexDirection: 'column',
-          gap: 1.25,
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'stretch', sm: 'center' },
+          justifyContent: 'space-between',
+          gap: { xs: 1.25, sm: 2 },
         }}
       >
         <FormControlLabel
@@ -148,11 +150,11 @@ export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProp
             />
           }
           label={<Typography variant="body2">Paid by taxpayer</Typography>}
-          sx={{ m: 0 }}
+          sx={{ m: 0, flexShrink: 0 }}
         />
 
         {paysNationalPension && (
-          <Box>
+          <Box sx={{ flex: 1, minWidth: 0, maxWidth: { sm: 460 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <SpinnerNumberField
                 id={inputId}

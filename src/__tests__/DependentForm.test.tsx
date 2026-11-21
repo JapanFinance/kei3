@@ -358,4 +358,146 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
       screen.queryByText(/unless the taxpayer pays their National Pension/),
     ).not.toBeInTheDocument();
   });
+
+  it('preserves typed custom amount across Custom and Paid by taxpayer toggles', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(
+      <DependentForm
+        dependent={makeDependent({
+          id: 'student-preserve',
+          relationship: 'child',
+          ageRange: '20to22',
+          paysNationalPension: true,
+        })}
+        onSave={onSave}
+        onCancel={vi.fn()}
+        incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
+      />,
+    );
+
+    const customSwitch = screen.getByRole('switch', { name: 'Custom' });
+    await user.click(customSwitch);
+    const input = screen.getByLabelText('Annual Contribution');
+    await user.clear(input);
+    await user.type(input, '120000');
+
+    // Toggle Custom off -> displays statutory full-year amount disabled
+    await user.click(customSwitch);
+    expect(screen.getByLabelText(/Annual Contribution/)).toBeDisabled();
+    expect(screen.getByLabelText(/Annual Contribution/)).toHaveValue('¥213,810');
+
+    // Toggle Custom back on -> restores ¥120,000
+    await user.click(customSwitch);
+    expect(screen.getByLabelText('Annual Contribution')).toHaveValue('¥120,000');
+
+    // Toggle Paid by taxpayer off and back on -> retains ¥120,000 custom mode
+    const paidSwitch = screen.getByRole('switch', { name: /Paid by taxpayer/ });
+    await user.click(paidSwitch);
+    expect(screen.queryByLabelText(/Annual Contribution/)).not.toBeInTheDocument();
+    await user.click(paidSwitch);
+    expect(screen.getByRole('switch', { name: 'Custom' })).toBeChecked();
+    expect(screen.getByLabelText('Annual Contribution')).toHaveValue('¥120,000');
+
+    await user.click(screen.getByRole('button', { name: /Update Dependent/ }));
+    expect(onSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        paysNationalPension: true,
+        nationalPensionCustomAmount: 120_000,
+      }),
+    );
+  });
+
+  it('keeps DependentForm Eligible Deductions focused on personal tax deductions', () => {
+    const unclaimedStudent = makeDependent({
+      id: 'student-deduction',
+      relationship: 'child',
+      ageRange: '20to22',
+      isClaimedAsDependent: false,
+      isSameHousehold: false,
+      paysNationalPension: true,
+    });
+
+    render(
+      <DependentForm
+        dependent={unclaimedStudent}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+        incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
+      />,
+    );
+
+    expect(screen.queryByText('Eligible Deductions:')).not.toBeInTheDocument();
+  });
+
+  it('shows only personal tax deductions in Dependent Deductions Summary and omits it when none apply', () => {
+    const unclaimedStudent = makeDependent({
+      id: 'student-deduction',
+      relationship: 'child',
+      ageRange: '20to22',
+      isClaimedAsDependent: false,
+      isSameHousehold: false,
+      paysNationalPension: true,
+    });
+    const claimedSpouse = makeSpouse({
+      id: 'spouse-deduction',
+      ageRange: '20to39',
+      isClaimedAsDependent: true,
+      paysNationalPension: true,
+      nationalPensionCustomAmount: 100_000,
+    });
+
+    const { rerender } = render(
+      <DependentsModal
+        open
+        onClose={vi.fn()}
+        dependents={[claimedSpouse, unclaimedStudent]}
+        onDependentsChange={vi.fn()}
+        taxpayerNetIncome={5_000_000}
+        incomeYear={INCOME_YEAR}
+        healthInsuranceProvider={DEFAULT_PROVIDER}
+        taxpayerAgeRange="age40to59"
+        onNHIPaymentAttributionChange={vi.fn()}
+        region="Tokyo"
+        onNHIHouseholdRegionChange={vi.fn()}
+      />,
+    );
+
+    const summarySection = screen.getByRole('heading', {
+      name: 'Dependent Deductions Summary',
+    }).parentElement!;
+
+    expect(within(summarySection).queryByText(/National Pension/)).not.toBeInTheDocument();
+
+    // Summary reflects only Spouse personal deductions (380,000 / 330,000)
+    const totalRow = within(summarySection).getByRole('row', { name: /^Total/ });
+    const totalCells = within(totalRow).getAllByRole('cell');
+    expect(totalCells[1]!).toHaveTextContent('¥380,000');
+    expect(totalCells[2]!).toHaveTextContent('¥330,000');
+
+    // When household members only have paid National Pension and no personal tax deductions,
+    // Dependent Deductions Summary is omitted instead of showing an empty ¥0 total row.
+    rerender(
+      <DependentsModal
+        open
+        onClose={vi.fn()}
+        dependents={[unclaimedStudent]}
+        onDependentsChange={vi.fn()}
+        taxpayerNetIncome={5_000_000}
+        incomeYear={INCOME_YEAR}
+        healthInsuranceProvider={DEFAULT_PROVIDER}
+        taxpayerAgeRange="age40to59"
+        onNHIPaymentAttributionChange={vi.fn()}
+        region="Tokyo"
+        onNHIHouseholdRegionChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole('heading', { name: 'Dependent Deductions Summary' }),
+    ).not.toBeInTheDocument();
+  });
 });
