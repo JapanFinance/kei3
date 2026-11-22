@@ -142,6 +142,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   const nationalPensionCard = isEligibleForNP ? (
     <NationalPensionPaymentCard
+      isSpouse={false}
       taxpayerPaysNationalPension={taxpayerPaysNationalPension}
       customAmount={nationalPensionCustomAmount}
       incomeYear={incomeYear}

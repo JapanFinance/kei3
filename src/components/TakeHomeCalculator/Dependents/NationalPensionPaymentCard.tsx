@@ -18,7 +18,7 @@ import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface NationalPensionPaymentCardProps {
   /** Whether the family member is a spouse (adjusts Category 3 vs Category 1 guidance). */
-  isSpouse?: boolean | undefined;
+  isSpouse: boolean;
   taxpayerPaysNationalPension: boolean;
   customAmount?: number | undefined;
   incomeYear: number;
@@ -33,7 +33,7 @@ interface NationalPensionPaymentCardProps {
  * National Pension (国民年金) contributions and claiming 社会保険料控除 (所法第74条第2項第1号).
  */
 export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProps> = ({
-  isSpouse = false,
+  isSpouse,
   taxpayerPaysNationalPension,
   customAmount,
   incomeYear,
