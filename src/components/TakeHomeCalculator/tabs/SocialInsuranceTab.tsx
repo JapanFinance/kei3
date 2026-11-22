@@ -3,10 +3,11 @@
 
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
 import Box from '@mui/material/Box';
+import Collapse from '@mui/material/Collapse';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { getCustomProviderRates } from '../../../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
@@ -74,6 +75,8 @@ const PENSION_SECTION_COPY: Record<PensionKind, PensionSectionCopy> = {
   },
 };
 
+const FAMILY_NATIONAL_PENSION_ID = 'family-national-pension-breakdown';
+
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
   inputs: TakeHomeInputs;
@@ -82,6 +85,7 @@ interface SocialInsuranceTabProps {
 const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [showFamilyPensionBreakdown, setShowFamilyPensionBreakdown] = useState(false);
 
   const totalSocialInsurance = totalSocialInsurancePaid(results);
 
@@ -731,124 +735,205 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         })()}
 
       {/* Pension Payments */}
-      <Box sx={{ mt: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {pensionCopy.title}
-          </Typography>
-        </Box>
-        {!isIncomeBasedProvider && (
-          <ResultRow
-            label="Monthly Contribution"
-            sublabel={employeesPensionDue ? `(SMR Grade ${pensionGrade})` : undefined}
-            labelSuffix={
-              employeesPensionDue ? (
-                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                  <DetailedTooltip title="Pension Contribution">
-                    <PensionPremiumTooltip
-                      inputs={inputs}
-                      monthlyRemuneration={rawMonthlyRemuneration}
-                      standardMonthlyRemuneration={pensionSMR}
-                    />
-                  </DetailedTooltip>
-                  {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                    <CapIndicator
-                      capStatus={capStatus}
-                      contributionType="pension"
-                      iconOnly={isMobile}
-                    />
-                  )}
-                </Box>
-              ) : (
-                <SimpleTooltip>
-                  At the selected age there is no compulsory Employees' Pension (厚生年金保険)
-                  contribution: enrollment ends at age 70.
-                </SimpleTooltip>
-              )
-            }
-            value={formatJPY(
-              Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
-            )}
-            type="indented"
-          />
-        )}
-        {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
-          <ResultRow
-            label="Bonus Contribution"
-            labelSuffix={
-              <DetailedTooltip title="Bonus Pension Contribution">
-                <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
-              </DetailedTooltip>
-            }
-            value={formatJPY(results.pensionOnBonus)}
-            type="indented"
-          />
-        )}
-        <ResultRow
-          label="Annual Contribution"
-          labelSuffix={
-            isNationalHealthInsurance && nationalPensionDue ? (
-              <DetailedTooltip title="Pension Contribution">
-                <NationalPensionTooltip
-                  year={inputs.incomeYear}
-                  exemption={results.nationalPensionExemption}
-                />
-              </DetailedTooltip>
-            ) : pensionCopy.noContributionNote !== undefined ? (
-              <SimpleTooltip>{pensionCopy.noContributionNote}</SimpleTooltip>
-            ) : undefined
-          }
-          value={formatJPY(results.pensionPayments)}
-          type="subtotal"
-        />
-      </Box>
+      {(() => {
+        const familyBreakdown = results.familyNationalPensionBreakdown;
+        const familyTotal = results.familyNationalPension;
+        const hasFamilyNationalPension =
+          familyTotal !== undefined &&
+          familyTotal > 0 &&
+          familyBreakdown !== undefined &&
+          familyBreakdown.length > 0;
 
-      {/* Family National Pension (paid by taxpayer under 所法第74条第2項第1号) */}
-      {results.familyNationalPension !== undefined &&
-        results.familyNationalPension > 0 &&
-        results.familyNationalPensionBreakdown &&
-        (() => {
-          const breakdown = results.familyNationalPensionBreakdown;
-          const counts = new Map<string, number>();
-          for (const item of breakdown) {
-            counts.set(item.relationship, (counts.get(item.relationship) ?? 0) + 1);
-          }
-          const indices = new Map<string, number>();
+        const taxpayerPensionTooltip =
+          !(isNationalHealthInsurance && nationalPensionDue) &&
+          pensionCopy.noContributionNote !== undefined ? (
+            <SimpleTooltip>{pensionCopy.noContributionNote}</SimpleTooltip>
+          ) : undefined;
 
-          return (
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                Family National Pension
-                <DetailedTooltip title="Family National Pension" icon={SIMPLE_TOOLTIP_ICON}>
-                  <NationalPensionTooltip year={inputs.incomeYear} familyDeduction />
-                </DetailedTooltip>
-              </Typography>
-              {breakdown.map(item => {
-                const baseLabel =
-                  RELATIONSHIPS.find(r => r.value === item.relationship)?.label ??
-                  item.relationship;
-                const totalForRel = counts.get(item.relationship) ?? 1;
-                const nextIdx = (indices.get(item.relationship) ?? 0) + 1;
-                indices.set(item.relationship, nextIdx);
-                const memberLabel = totalForRel > 1 ? `${baseLabel} ${nextIdx}` : baseLabel;
+        const familyNationalPensionRows = hasFamilyNationalPension
+          ? (() => {
+              const counts = new Map<string, number>();
+              for (const item of familyBreakdown) {
+                counts.set(item.relationship, (counts.get(item.relationship) ?? 0) + 1);
+              }
+              const indices = new Map<string, number>();
 
-                return (
+              return (
+                <>
                   <ResultRow
-                    key={item.id}
-                    label={item.isCustomAmount ? `${memberLabel} (custom)` : memberLabel}
-                    value={formatJPY(item.amount)}
+                    label="Family"
+                    disclosure={{
+                      expanded: showFamilyPensionBreakdown,
+                      onToggle: () => setShowFamilyPensionBreakdown(open => !open),
+                      controlsId: FAMILY_NATIONAL_PENSION_ID,
+                    }}
+                    labelSuffix={
+                      <DetailedTooltip title="Family National Pension" icon={SIMPLE_TOOLTIP_ICON}>
+                        <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
+                          Contributions actually paid on behalf of a spouse or relative who shares
+                          living expenses (生計を一にする配偶者その他の親族) are deductible under
+                          the Social Insurance Deduction (社会保険料控除). Living at the same
+                          registered address is not required (e.g. a university student living apart
+                          qualifies).
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
+                          Each family member's amount reflects either the standard full-year
+                          Category 1 contribution or the custom amount entered in the Household
+                          dialog (e.g. for partial-year enrollment, advance payments (前納),
+                          additional pension (付加保険料), or back-payments (追納)). Claiming the
+                          deduction requires attaching the deduction certificate
+                          (社会保険料（国民年金保険料）控除証明書) at year-end adjustment or tax
+                          filing.
+                        </Typography>
+                        <SourceLinks
+                          sources={[
+                            {
+                              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1130.htm',
+                              label:
+                                'NTA: Social Insurance Deduction (国税庁: 社会保険料控除 No.1130)',
+                            },
+                          ]}
+                        />
+                      </DetailedTooltip>
+                    }
+                    value={formatJPY(familyTotal)}
                     type="indented"
                   />
-                );
-              })}
-              <ResultRow
-                label="Family Pension Contribution"
-                value={formatJPY(results.familyNationalPension)}
-                type="subtotal"
-              />
+                  <Collapse in={showFamilyPensionBreakdown} id={FAMILY_NATIONAL_PENSION_ID}>
+                    <Box sx={{ mb: 0.5 }}>
+                      {familyBreakdown.map(item => {
+                        const baseLabel =
+                          RELATIONSHIPS.find(r => r.value === item.relationship)?.label ??
+                          item.relationship;
+                        const totalForRel = counts.get(item.relationship) ?? 1;
+                        const nextIdx = (indices.get(item.relationship) ?? 0) + 1;
+                        indices.set(item.relationship, nextIdx);
+                        const memberLabel = totalForRel > 1 ? `${baseLabel} ${nextIdx}` : baseLabel;
+
+                        return (
+                          <ResultRow
+                            key={item.id}
+                            label={item.isCustomAmount ? `${memberLabel} (custom)` : memberLabel}
+                            value={formatJPY(item.amount)}
+                            type="detail"
+                          />
+                        );
+                      })}
+                    </Box>
+                  </Collapse>
+                </>
+              );
+            })()
+          : null;
+
+        return (
+          <>
+            <Box sx={{ mt: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                  {pensionCopy.title}
+                  {isNationalHealthInsurance &&
+                    (nationalPensionDue || hasFamilyNationalPension) && (
+                      <DetailedTooltip title="Pension Contribution" icon={SIMPLE_TOOLTIP_ICON}>
+                        <NationalPensionTooltip
+                          year={inputs.incomeYear}
+                          exemption={results.nationalPensionExemption}
+                        />
+                      </DetailedTooltip>
+                    )}
+                </Typography>
+              </Box>
+              {!isIncomeBasedProvider && (
+                <ResultRow
+                  label="Monthly Contribution"
+                  sublabel={employeesPensionDue ? `(SMR Grade ${pensionGrade})` : undefined}
+                  labelSuffix={
+                    employeesPensionDue ? (
+                      <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                        <DetailedTooltip title="Pension Contribution">
+                          <PensionPremiumTooltip
+                            inputs={inputs}
+                            monthlyRemuneration={rawMonthlyRemuneration}
+                            standardMonthlyRemuneration={pensionSMR}
+                          />
+                        </DetailedTooltip>
+                        {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                          <CapIndicator
+                            capStatus={capStatus}
+                            contributionType="pension"
+                            iconOnly={isMobile}
+                          />
+                        )}
+                      </Box>
+                    ) : (
+                      <SimpleTooltip>
+                        At the selected age there is no compulsory Employees' Pension (厚生年金保険)
+                        contribution: enrollment ends at age 70.
+                      </SimpleTooltip>
+                    )
+                  }
+                  value={formatJPY(
+                    Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
+                  )}
+                  type="indented"
+                />
+              )}
+              {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
+                <ResultRow
+                  label="Bonus Contribution"
+                  labelSuffix={
+                    <DetailedTooltip title="Bonus Pension Contribution">
+                      <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
+                    </DetailedTooltip>
+                  }
+                  value={formatJPY(results.pensionOnBonus)}
+                  type="indented"
+                />
+              )}
+              {isNationalHealthInsurance && hasFamilyNationalPension ? (
+                <>
+                  <ResultRow
+                    label="Taxpayer"
+                    labelSuffix={taxpayerPensionTooltip}
+                    value={formatJPY(results.pensionPayments)}
+                    type="indented"
+                  />
+                  {familyNationalPensionRows}
+                  <ResultRow
+                    label="Annual Contribution"
+                    value={formatJPY(results.pensionPayments + familyTotal)}
+                    type="subtotal"
+                  />
+                </>
+              ) : (
+                <ResultRow
+                  label="Annual Contribution"
+                  labelSuffix={taxpayerPensionTooltip}
+                  value={formatJPY(results.pensionPayments)}
+                  type="subtotal"
+                />
+              )}
             </Box>
-          );
-        })()}
+
+            {!isNationalHealthInsurance && hasFamilyNationalPension && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                  National Pension
+                  <DetailedTooltip title="Pension Contribution" icon={SIMPLE_TOOLTIP_ICON}>
+                    <NationalPensionTooltip year={inputs.incomeYear} />
+                  </DetailedTooltip>
+                </Typography>
+                {familyNationalPensionRows}
+                <ResultRow
+                  label="Annual Contribution"
+                  value={formatJPY(familyTotal)}
+                  type="subtotal"
+                />
+              </Box>
+            )}
+          </>
+        );
+      })()}
 
       {/* Long-term Care Insurance (第1号被保険者, ages 65+) */}
       {results.longTermCareCategory1Premium !== undefined && (

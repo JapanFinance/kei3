@@ -85,19 +85,19 @@ export const NationalPensionPaymentCard: React.FC<NationalPensionPaymentCardProp
         >
           <Typography variant="body2" sx={{ mb: 1 }}>
             National Pension contributions paid by the taxpayer on behalf of a spouse or relative
-            who shares living expenses (生計を一にする) are 100% deductible as a social insurance
-            deduction (社会保険料控除, Income Tax Act Art. 74). Neither living at the same address
-            nor claiming a dependent tax deduction is required.
+            who shares living expenses (生計を一にする) are deductible as a social insurance
+            deduction (社会保険料控除). Neither living at the same address nor claiming a dependent
+            tax deduction is required.
           </Typography>
           {isSpouse ? (
             <Typography variant="body2" sx={{ mb: 1 }}>
               <strong>Category 3 note:</strong> A dependent spouse aged 20–59 supported by an
               employee under 65 (or 65–69 without old-age pension entitlement) enrolled in
-              Employees&apos; Pension (厚生年金) with annual income below ¥1.3M is normally a
-              Category 3 insured person (第3号被保険者) with ¥0 contribution. This toggle applies
-              only when Category 1 contributions are actually paid (e.g. taxpayer on NHI, aged 65+
-              with old-age pension entitlement or 70+, spouse earning ≥ ¥1.3M outside
-              Employees&apos; Pension, or back-payments (追納)).
+              Employees' Pension (厚生年金) with annual income below ¥1.3M is normally a Category 3
+              insured person (第3号被保険者) with ¥0 contribution. This toggle applies only when
+              Category 1 contributions are actually paid (e.g. taxpayer on NHI, aged 65+ with
+              old-age pension entitlement or 70+, spouse earning ≥ ¥1.3M outside Employees' Pension,
+              or back-payments (追納)).
             </Typography>
           ) : (
             <Typography variant="body2" sx={{ mb: 1 }}>
