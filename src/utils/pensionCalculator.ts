@@ -249,6 +249,11 @@ export function getEffectiveFamilyNationalPensionAmount(
   return Number.isFinite(custom) ? Math.max(0, Math.round(custom)) : 0;
 }
 
+export interface FamilyNationalPensionResult {
+  total: number;
+  breakdown: FamilyNationalPensionItem[];
+}
+
 /**
  * Calculates National Pension (国民年金) contributions paid by the taxpayer on behalf of
  * family members sharing living expenses (生計を一にする配偶者その他の親族, 所得税法第74条第2項第1号).
@@ -258,7 +263,7 @@ export function getEffectiveFamilyNationalPensionAmount(
 export function calculateFamilyNationalPension(
   dependents: readonly Dependent[],
   year: number,
-): { total: number; breakdown: FamilyNationalPensionItem[] } {
+): FamilyNationalPensionResult {
   const breakdown: FamilyNationalPensionItem[] = [];
   let total = 0;
 
