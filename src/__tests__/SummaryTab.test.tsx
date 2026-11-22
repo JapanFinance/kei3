@@ -223,4 +223,23 @@ describe('SummaryTab with household NHI premium', () => {
     expect(screen.getByText(/^¥370,000/)).toBeInTheDocument();
     expect(screen.queryByText(/National Health Insurance/i)).not.toBeInTheDocument();
   });
+
+  it('folds family National Pension into the single Pension Payments row', () => {
+    render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          healthInsurance: 200_000,
+          pensionPayments: 100_000,
+          familyNationalPension: 213_810,
+        }}
+      />,
+    );
+
+    // 100,000 personal pension + 213,810 family National Pension = 313,810
+    expect(screen.getByText(/^¥313,810/)).toBeInTheDocument();
+    // 200,000 health insurance + 313,810 pension = 513,810 total social insurance
+    expect(screen.getByText(/^¥513,810/)).toBeInTheDocument();
+    expect(screen.queryByText(/Family National Pension/i)).not.toBeInTheDocument();
+  });
 });

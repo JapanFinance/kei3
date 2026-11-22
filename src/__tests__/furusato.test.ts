@@ -420,7 +420,7 @@ describe('calculateFurusatoNozeiLimit', () => {
         ...baseInputs,
         incomeStreams,
         dependents: [
-          makeSpouse({ id: 'spouse', ageRange: 'under40' }),
+          makeSpouse({ id: 'spouse', ageRange: '20to39' }),
           makeDependent({ id: 'child', ageRange: '16to18' }),
         ],
         homeLoanTaxCredit,

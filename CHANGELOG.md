@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-11-22
+
+### Updated
+
+- Family members' National Pension ([国民年金](https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html)) contributions paid by the taxpayer can now be configured in the Household modal for spouses and relatives aged 20–59. Paid amounts are deducted in full under the social insurance deduction ([社会保険料控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1130.htm)), using either the statutory full-year total or a custom yen amount for partial-year enrollment, advance payments (前納), additional pension (付加保険料), or back-payments (追納).
+
 ## 2026-11-05
 
 ### Updated

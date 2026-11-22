@@ -120,13 +120,14 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year, e
         sources={[
           {
             href: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01',
-            label: '国民年金保険料の金額 (Japan Pension Service)',
+            label: 'Japan Pension Service: National Pension Contributions (国民年金保険料の金額)',
           },
           ...(exemption
             ? [
                 {
                   href: 'https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html',
-                  label: '国民年金保険料の免除制度・納付猶予制度 - 日本年金機構',
+                  label:
+                    'Japan Pension Service: National Pension Exemption & Deferral (国民年金保険料の免除制度・納付猶予制度)',
                 },
               ]
             : []),

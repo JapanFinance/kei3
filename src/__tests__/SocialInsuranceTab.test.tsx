@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import type { CommutingAllowanceIncomeStream, TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { calculateTaxes } from '../utils/taxCalculations';
-import { makeSpouse } from './fixtures/dependents';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 // Mock DetailedTooltip to render children directly for easier testing
@@ -836,7 +837,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
       dependents: [
         makeSpouse({
           id: 'spouse',
-          ageRange: '40to64',
+          ageRange: '40to59',
           // Net employment income in 2026: 1,190,000 - 740,000 = 450,000.
           // Base: 450,000 - 430,000 = 20,000.
           income: {
@@ -893,7 +894,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
       dependents: [
         makeSpouse({
           id: 'spouse',
-          ageRange: '40to64',
+          ageRange: '40to59',
           income: {
             grossEmploymentIncome: 0,
             grossPublicPensionIncome: 0,
@@ -952,7 +953,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
           isClaimedAsDependent: false,
           healthInsurance: 'nhi',
         }),
-        {
+        makeDependent({
           id: 'child',
           relationship: 'child',
           ageRange: '23to39',
@@ -966,7 +967,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
           isClaimedAsDependent: true,
           healthInsurance: 'nhi',
           isHouseholdHead: false,
-        },
+        }),
       ],
     };
 
@@ -1008,5 +1009,134 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
     expect(resultRowText('Long-term Care Portion')).toContain('¥0');
     expect(resultRowText('Child Support Portion')).toContain('¥0');
     expect(resultRowText('Annual Premium')).toContain('¥0');
+  });
+
+  it('renders Family row with collapsible member breakdown under National Pension for employee taxpayer', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'salary', type: 'salary', amount: 6_000_000, frequency: 'annual' }],
+      incomeYear: 2026,
+      ageRange: 'age40to59',
+      region: 'Tokyo',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [
+        makeDependent({
+          id: 'child-1',
+          relationship: 'child',
+          ageRange: '20to22',
+          isSameHousehold: false,
+          taxpayerPaysNationalPension: true,
+        }),
+        makeDependent({
+          id: 'child-2',
+          relationship: 'child',
+          ageRange: '20to22',
+          isSameHousehold: false,
+          taxpayerPaysNationalPension: true,
+          nationalPensionCustomAmount: 107_520,
+        }),
+      ],
+    };
+
+    const results = calculateTaxes(inputs);
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.queryByText('Family National Pension')).not.toBeInTheDocument();
+    const npHeading = screen.getByText('National Pension').closest('h6')!;
+    const npSection = npHeading.parentElement!;
+
+    // NationalPensionTooltip (Annual Total) is shown once on the heading, not duplicated
+    expect(within(npHeading).getByTitle('Pension Contribution')).toBeInTheDocument();
+    expect(screen.getAllByTitle('Pension Contribution')).toHaveLength(2); // Employees' Pension + National Pension
+
+    const familyToggle = within(npSection).getByRole('button', { name: 'Family' });
+    expect(familyToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(familyToggle.closest('div')!.parentElement!.textContent).toContain('¥321,330');
+    expect(
+      within(npSection).getByText('Annual Contribution').closest('div')!.parentElement!.textContent,
+    ).toContain('¥321,330');
+
+    await user.click(familyToggle);
+    expect(familyToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      within(npSection).getByText('Child 1').closest('div')!.parentElement!.textContent,
+    ).toContain('¥213,810');
+    expect(
+      within(npSection).getByText('Child 2 (custom)').closest('div')!.parentElement!.textContent,
+    ).toContain('¥107,520');
+
+    expect(resultRowText('Annual Social Insurance')).toContain(
+      `¥${(results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0) + 321_330).toLocaleString('en-US')}`,
+    );
+
+    const tooltipTexts = screen
+      .getAllByTestId('detail-info-tooltip-content')
+      .map(node => node.textContent ?? '')
+      .join('\n');
+    expect(tooltipTexts).toContain('Annual Total');
+    expect(tooltipTexts).toContain('deductible under the Social Insurance Deduction');
+    expect(tooltipTexts).toContain(
+      'standard full-year Category 1 contribution or the custom amount',
+    );
+    expect(
+      screen.getByRole('link', {
+        name: /NTA: Social Insurance Deduction \(国税庁: 社会保険料控除 No\.1130\)/,
+      }),
+    ).toHaveAttribute('href', 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1130.htm');
+  });
+
+  it('renders Taxpayer and Family rows under a single National Pension section for NHI taxpayer', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'biz', type: 'business', amount: 4_000_000 }],
+      incomeYear: 2026,
+      ageRange: 'age40to59',
+      region: 'Tokyo-Setagaya',
+      healthInsuranceProvider: 'NationalHealthInsurance',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [
+        makeSpouse({
+          id: 'spouse-np',
+          ageRange: '40to59',
+          taxpayerPaysNationalPension: true,
+        }),
+      ],
+    };
+
+    const results = calculateTaxes(inputs);
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    const npHeadings = screen.getAllByText('National Pension');
+    expect(npHeadings).toHaveLength(1);
+    const npHeading = npHeadings[0]!.closest('h6')!;
+    const npSection = npHeading.parentElement!.parentElement!;
+
+    // NationalPensionTooltip appears once on the heading rather than duplicated on Taxpayer and Family
+    expect(within(npHeading).getByTitle('Pension Contribution')).toBeInTheDocument();
+    expect(screen.getAllByTitle('Pension Contribution')).toHaveLength(1);
+    expect(screen.getAllByText('Annual Total')).toHaveLength(1);
+
+    expect(
+      within(npSection).getByText('Taxpayer').closest('div')!.parentElement!.textContent,
+    ).toContain('¥213,810');
+    const familyToggle = within(npSection).getByRole('button', { name: 'Family' });
+    expect(familyToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(familyToggle.closest('div')!.parentElement!.textContent).toContain('¥213,810');
+    expect(
+      within(npSection).getByText('Annual Contribution').closest('div')!.parentElement!.textContent,
+    ).toContain('¥427,620');
+
+    await user.click(familyToggle);
+    expect(familyToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      within(npSection).getByText('Spouse').closest('div')!.parentElement!.textContent,
+    ).toContain('¥213,810');
   });
 });

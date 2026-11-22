@@ -28,7 +28,12 @@ import type {
   DependentIncome,
   HouseholdMemberHealthInsurance,
 } from '../../../types/dependents';
-import { RELATIONSHIPS, DISABILITY_LEVELS, DEPENDENT_AGE_RANGES } from '../../../types/dependents';
+import {
+  RELATIONSHIPS,
+  DISABILITY_LEVELS,
+  DEPENDENT_AGE_RANGES,
+  isDependentSubjectToNationalPension,
+} from '../../../types/dependents';
 import type { HealthInsuranceProviderId } from '../../../types/healthInsurance';
 import {
   calculateDependentDeductions,
@@ -38,11 +43,13 @@ import {
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
 import { getAutoHealthInsuranceLabel } from '../../../utils/nhiHousehold';
+import { getEffectiveFamilyNationalPensionAmount } from '../../../utils/pensionCalculator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
+import { NationalPensionPaymentCard } from './NationalPensionPaymentCard';
 
 const incomeInputSx = {
   maxWidth: { xs: 125, sm: 160 },
@@ -100,6 +107,12 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   const [isHouseholdHead, setIsHouseholdHead] = useState<boolean>(
     dependent?.isHouseholdHead ?? false,
   );
+  const [taxpayerPaysNationalPension, setTaxpayerPaysNationalPension] = useState<boolean>(
+    dependent?.taxpayerPaysNationalPension ?? false,
+  );
+  const [nationalPensionCustomAmount, setNationalPensionCustomAmount] = useState<
+    number | undefined
+  >(dependent?.nationalPensionCustomAmount);
 
   const handleSubmit = () => {
     const newDependent: OtherDependent = {
@@ -112,12 +125,33 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       isClaimedAsDependent,
       healthInsurance,
       isHouseholdHead,
+      taxpayerPaysNationalPension,
+      ...(nationalPensionCustomAmount !== undefined && { nationalPensionCustomAmount }),
     };
 
     onSave(newDependent);
   };
 
-  const hasAnyImpact = isClaimedAsDependent || isSameHousehold;
+  const hasIncomeOrHouseholdImpact = isClaimedAsDependent || isSameHousehold;
+  const isEligibleForNP = isDependentSubjectToNationalPension(ageRange);
+  const effectiveNationalPension = getEffectiveFamilyNationalPensionAmount(
+    { ageRange, taxpayerPaysNationalPension, nationalPensionCustomAmount },
+    incomeYear,
+  );
+  const hasAnyImpact = hasIncomeOrHouseholdImpact || effectiveNationalPension > 0;
+
+  const nationalPensionCard = isEligibleForNP ? (
+    <NationalPensionPaymentCard
+      isSpouse={false}
+      taxpayerPaysNationalPension={taxpayerPaysNationalPension}
+      customAmount={nationalPensionCustomAmount}
+      incomeYear={incomeYear}
+      onChange={updates => {
+        setTaxpayerPaysNationalPension(updates.taxpayerPaysNationalPension);
+        setNationalPensionCustomAmount(updates.nationalPensionCustomAmount);
+      }}
+    />
+  ) : null;
 
   const canSubmit = true; // All fields have defaults, always submittable
 
@@ -285,14 +319,20 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         />
       </Box>
 
-      {!hasAnyImpact ? (
-        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            This person is neither claimed as a dependent nor registered at the same address for
-            National Health Insurance. As a result, they will have no effect on taxes or health
-            insurance premiums.
-          </Typography>
-        </Paper>
+      {!hasIncomeOrHouseholdImpact ? (
+        <>
+          {nationalPensionCard}
+          {!hasAnyImpact && (
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                This person is neither claimed as a dependent nor registered at the same address for
+                National Health Insurance. As a result, they will have no effect on taxes or social
+                insurance
+                {isEligibleForNP ? ' unless the taxpayer pays their National Pension.' : '.'}
+              </Typography>
+            </Paper>
+          )}
+        </>
       ) : (
         <>
           {/* Income & Household Health Insurance Section */}
@@ -615,6 +655,8 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             )}
           </Box>
 
+          {nationalPensionCard}
+
           {/* Eligible Deductions Table */}
           {isClaimedAsDependent && (
             <Box sx={{ mt: 1 }}>
@@ -642,6 +684,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                         isClaimedAsDependent,
                         healthInsurance,
                         isHouseholdHead,
+                        taxpayerPaysNationalPension,
                       };
 
                       // Calculate all deductions for this dependent

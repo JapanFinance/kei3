@@ -23,7 +23,7 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
   describe('General spouse (under 70) - income ≤ 58万円', () => {
     const spouse: Dependent = makeSpouse({
       id: '1',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: false,
       income: {
         grossEmploymentIncome: 900_000, // Gross 90万円 → net 35万円 (under 58万円 limit)
@@ -180,7 +180,7 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
   describe('Spouse income 58-100万円 (qualifies for spouse special deduction)', () => {
     const spouse: Dependent = makeSpouse({
       id: '1',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: false,
       income: {
         grossEmploymentIncome: 1_600_001, // Gross 1,600,001円 → net 950,001円 (over 58万円, qualifies for spouse special deduction)
@@ -222,7 +222,7 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
       it(`spouse ${description} → statutory difference is 0`, () => {
         const spouse: Dependent = makeSpouse({
           id: '1',
-          ageRange: 'under40',
+          ageRange: '20to39',
           isSameHousehold: false,
           income: {
             grossEmploymentIncome: grossIncome,
@@ -306,7 +306,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: true,
       });
 
@@ -562,7 +562,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
   it('spouse + multiple dependents + disability', () => {
     const spouse: Dependent = makeSpouse({
       id: '1',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: false,
       income: {
         grossEmploymentIncome: 900_000,
@@ -574,7 +574,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     const child1: Dependent = makeDependent({
       id: '2',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: true,
     });
 
@@ -664,7 +664,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     const child: Dependent = makeDependent({
       id: '2',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: true,
     });
 
@@ -700,7 +700,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       makeDependent({
         id: '2',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: true,
       }),
       makeDependent({
@@ -760,7 +760,7 @@ describe('Specific Relative Special Deduction (特定親族特別控除)', () =>
     const dependent: Dependent = makeDependent({
       id: '1',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: false,
       income: {
         grossEmploymentIncome: 1_490_000, // Net = 750,000 (qualifies for specific relative special)
