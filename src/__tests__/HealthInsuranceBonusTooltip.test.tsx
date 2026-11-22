@@ -4,84 +4,20 @@
 import { render, screen } from '@testing-library/react';
 
 import HealthInsuranceBonusTooltip from '../components/TakeHomeCalculator/tabs/HealthInsuranceBonusTooltip';
-import { DEFAULT_PROVIDER_REGION, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
+import {
+  getEmployeePremiumRate,
+  getRegionalRatesForMonth,
+} from '../data/employeesHealthInsurance/providerRates';
+import { CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
-
-// Mock the provider data (time-series structure: regions map to arrays of rate periods)
-vi.mock('../data/employeesHealthInsurance/providerRateData', async importOriginal => {
-  const { percentTo } = await import('../data/rate');
-  const percent = percentTo(4);
-  const PROVIDER_DEFINITIONS = {
-    KyokaiKenpo: {
-      providerName: 'Kyokai Kenpo',
-      regions: {
-        DEFAULT: [
-          {
-            effectiveFrom: { year: 2025, month: 3 },
-            rates: {
-              employeeHealthInsuranceRate: percent(5),
-              employerHealthInsuranceRate: percent(6),
-              employeeLongTermCareRate: percent(1),
-              employerLongTermCareRate: percent(1),
-            },
-          },
-        ],
-      },
-    },
-    TestProviderNoEmployerRate: {
-      providerName: 'Test Provider No Employer',
-      regions: {
-        DEFAULT: [
-          {
-            effectiveFrom: { year: 2025, month: 3 },
-            rates: {
-              employeeHealthInsuranceRate: percent(4),
-              employeeLongTermCareRate: percent(1),
-            },
-          },
-        ],
-      },
-    },
-  };
-  return {
-    ...(await importOriginal<typeof import('../data/employeesHealthInsurance/providerRateData')>()),
-    PROVIDER_DEFINITIONS,
-    getProviderDefinition: (id: string) =>
-      PROVIDER_DEFINITIONS[id as keyof typeof PROVIDER_DEFINITIONS],
-  };
-});
-
-// Mock the rate lookup to use the mocked data
-vi.mock('../data/employeesHealthInsurance/providerRates', async importOriginal => {
-  const { percentTo } = await import('../data/rate');
-  const percent = percentTo(4);
-  return {
-    ...(await importOriginal<typeof import('../data/employeesHealthInsurance/providerRates')>()),
-    getRegionalRatesForMonth: (providerId: string) => {
-      const providers: Record<string, Record<string, unknown>> = {
-        KyokaiKenpo: {
-          employeeHealthInsuranceRate: percent(5),
-          employerHealthInsuranceRate: percent(6),
-          employeeLongTermCareRate: percent(1),
-          employerLongTermCareRate: percent(1),
-        },
-        TestProviderNoEmployerRate: {
-          employeeHealthInsuranceRate: percent(4),
-          employeeLongTermCareRate: percent(1),
-        },
-      };
-      return providers[providerId];
-    },
-  };
-});
 
 describe('HealthInsuranceBonusTooltip', () => {
   const mockInputs: TakeHomeInputs = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [],
     ageRange: 'age20to39' as const,
-    region: DEFAULT_PROVIDER_REGION,
+    region: 'Tokyo',
     healthInsuranceProvider: 'KyokaiKenpo',
     dependents: [],
     dcPlanContributions: 0,
@@ -124,6 +60,11 @@ describe('HealthInsuranceBonusTooltip', () => {
   ];
 
   test('shows the rate of a provider as a percentage', () => {
+    const expectedRate = getEmployeePremiumRate(
+      getRegionalRatesForMonth('KyokaiKenpo', 'Tokyo', 2026, 6)!,
+      true,
+    ).toPercent();
+
     render(
       <HealthInsuranceBonusTooltip
         inputs={{ ...mockInputs, ageRange: 'age40to59' }}
@@ -131,7 +72,10 @@ describe('HealthInsuranceBonusTooltip', () => {
       />,
     );
 
-    expect(screen.getByText('6.0%')).toBeInTheDocument();
+    expect(screen.getByText(expectedRate)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Kyokai Kenpo (Tokyo) Premium Rates' }),
+    ).toBeInTheDocument();
   });
 
   test('shows the custom rate as a percentage', () => {

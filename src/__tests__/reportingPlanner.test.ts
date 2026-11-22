@@ -38,6 +38,20 @@ import {
 } from '../utils/reportingPlanner';
 import { makeSpouse } from './fixtures/dependents';
 
+const asAccount = (stream: IncomeStream): WithholdingAccountIncomeStream => {
+  if (stream.type !== 'withholdingAccount') {
+    throw new Error(`Expected withholdingAccount stream, got ${stream.type}`);
+  }
+  return stream;
+};
+
+const asDividend = (stream: IncomeStream): DividendsIncomeStream => {
+  if (stream.type !== 'dividends') {
+    throw new Error(`Expected dividends stream, got ${stream.type}`);
+  }
+  return stream;
+};
+
 const account = (
   overrides: Partial<WithholdingAccountIncomeStream> & Pick<WithholdingAccountIncomeStream, 'id'>,
 ): WithholdingAccountIncomeStream => ({
@@ -126,7 +140,7 @@ describe('deriveReportingUnits', () => {
     expect(units[0]!.states).toHaveLength(2);
 
     for (const state of units[0]!.states) {
-      const applied = state.apply(source) as WithholdingAccountIncomeStream;
+      const applied = asAccount(state.apply(source));
       // Reporting the loss without the dividends is the forbidden state; it must never appear.
       expect(applied.reportsCapitalGains && !applied.reportsDividends).toBe(false);
     }
@@ -166,7 +180,7 @@ describe('deriveReportingUnits', () => {
     });
     const units = deriveReportingUnits([source]);
     expect(units[0]!.states).toHaveLength(1);
-    const applied = units[0]!.states[0]!.apply(source) as DividendsIncomeStream;
+    const applied = asDividend(units[0]!.states[0]!.apply(source));
     expect(applied.isReported).toBe(true);
   });
 
@@ -195,7 +209,7 @@ describe('countPlans', () => {
 
     expect(plans).toHaveLength(countPlans(units));
     for (const plan of plans) {
-      const a = plan.streams[0] as WithholdingAccountIncomeStream;
+      const a = asAccount(plan.streams[0]!);
       expect(a.reportsCapitalGains && !a.reportsDividends).toBe(false);
     }
   });
@@ -235,7 +249,7 @@ describe('search-space reduction', () => {
       [false, true].map(reportsDividends => ({
         reportsDividend: reportsDividends,
         apply: (stream: IncomeStream) => ({
-          ...(stream as WithholdingAccountIncomeStream),
+          ...asAccount(stream),
           reportsCapitalGains,
           reportsDividends,
         }),
@@ -888,13 +902,11 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
     expect(hasOptionalUnit(minTaxUnits)).toBe(false);
 
     // Patched streams under the only state report everything
-    const patchedAccount = minTaxUnits[0]!.states[0]!.apply(
-      mixedAccount,
-    ) as WithholdingAccountIncomeStream;
+    const patchedAccount = asAccount(minTaxUnits[0]!.states[0]!.apply(mixedAccount));
     expect(patchedAccount.reportsCapitalGains).toBe(true);
     expect(patchedAccount.reportsDividends).toBe(true);
 
-    const patchedDividend = minTaxUnits[1]!.states[0]!.apply(domesticDiv) as DividendsIncomeStream;
+    const patchedDividend = asDividend(minTaxUnits[1]!.states[0]!.apply(domesticDiv));
     expect(patchedDividend.isReported).toBe(true);
   });
 
@@ -906,7 +918,7 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
     const plans = [...generatePlans(inputs.incomeStreams, units)];
     // Since there are no dividends, only 1 plan (reported, separate taxation) is generated
     expect(plans).toHaveLength(1);
-    const stream = plans[0]!.streams[1] as WithholdingAccountIncomeStream;
+    const stream = asAccount(plans[0]!.streams[1]!);
     expect(stream.reportsCapitalGains).toBe(true);
   });
 
@@ -934,6 +946,7 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
   });
 
   it('T8: reporting planner accounts for real estate income and shared blueFilerDeduction', () => {
+    const a1 = account({ id: 'a1', capitalGains: 1_000_000, dividends: 300_000 });
     const inputs: TakeHomeInputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
@@ -944,7 +957,7 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
           location: 'domestic',
           foreignTax: 0,
         },
-        account({ id: 'a1', capitalGains: 1_000_000, dividends: 300_000 }),
+        a1,
       ],
       blueFilerDeduction: 650_000,
       reportedDividendsTaxation: 'aggregate',
@@ -968,10 +981,10 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
       streams: [
         inputs.incomeStreams[0]!,
         {
-          ...inputs.incomeStreams[1]!,
+          ...a1,
           reportsCapitalGains: true,
           reportsDividends: true,
-        } as WithholdingAccountIncomeStream,
+        },
       ],
       election: 'aggregate',
     };

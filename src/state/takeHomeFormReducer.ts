@@ -117,9 +117,12 @@ const latterStageProviderOption: HealthInsuranceProviderOption = {
   displayName: getProviderDisplayName(LATTER_STAGE_ELDERLY_ID),
 };
 
-const employeeProviderOptions: HealthInsuranceProviderOption[] = (
-  Object.keys(PROVIDER_DEFINITIONS) as (keyof typeof PROVIDER_DEFINITIONS)[]
-).map(id => ({ id, displayName: getProviderDisplayName(id) }));
+const employeeProviderOptions: HealthInsuranceProviderOption[] =
+  // SAFETY: Object.keys returns string[], and PROVIDER_DEFINITIONS keys are every EmployeeProviderId.
+  (Object.keys(PROVIDER_DEFINITIONS) as (keyof typeof PROVIDER_DEFINITIONS)[]).map(id => ({
+    id,
+    displayName: getProviderDisplayName(id),
+  }));
 
 /**
  * The health insurance providers selectable for a given form state, in dropdown order.

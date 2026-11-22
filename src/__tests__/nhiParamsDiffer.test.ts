@@ -1,14 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import {
   nhiParamsDiffer,
   type NHIParamsField,
 } from '../data/nationalHealthInsurance/nhiParamsData';
 import type { NationalHealthInsuranceRegionParams } from '../types/healthInsurance';
-import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
+import { calculateNationalHealthInsuranceBreakdownFromParams } from '../utils/healthInsuranceCalculator';
 
 const BASE: NationalHealthInsuranceRegionParams = {
   regionName: 'Test',
@@ -37,20 +37,6 @@ const FLAT_ONLY_CURR: NationalHealthInsuranceRegionParams = {
   ...BASE,
   medicalHouseholdFlat: 30000,
 };
-
-vi.mock('../data/nationalHealthInsurance/nhiParamsData', async importOriginal => {
-  const actual =
-    await importOriginal<typeof import('../data/nationalHealthInsurance/nhiParamsData')>();
-  return {
-    ...actual,
-    getNHIParamsForMonth: (region: string, year: number, month: number) =>
-      region === 'Test-FlatOnly'
-        ? year > 2026 || (year === 2026 && month >= 3)
-          ? FLAT_ONLY_CURR
-          : FLAT_ONLY_PREV
-        : actual.getNHIParamsForMonth(region, year, month),
-  };
-});
 
 describe('nhiParamsDiffer', () => {
   it('is false for the same object and for a copy with equal values', () => {
@@ -88,11 +74,12 @@ describe('nhiParamsDiffer', () => {
 
 describe('NHI fiscal-year blending when only a household flat changes', () => {
   it('blends 3/10 of the previous fiscal year with 7/10 of the current one', () => {
-    const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+    const result = calculateNationalHealthInsuranceBreakdownFromParams(
       5_000_000,
       false,
       2026,
-      'Test-FlatOnly',
+      FLAT_ONLY_CURR,
+      FLAT_ONLY_PREV,
     );
     // (5,000,000 − 430,000) × 8% + 30,000 per capita = 395,600
     // FY2025: 395,600 + 20,000 = 415,600; FY2026: 395,600 + 30,000 = 425,600

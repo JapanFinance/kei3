@@ -25,6 +25,7 @@ import {
   type PlanRole,
   type ReportingRow,
   type SearchProgress,
+  type UseReportingPlansResult,
   useReportingPlans,
 } from './useReportingPlans';
 
@@ -35,6 +36,19 @@ interface ReportingPlannerProps {
   onStreamsChange: (streams: IncomeStream[]) => void;
   /** Applies a row's plan: the election its reported dividends, if any, are taxed under. */
   onReportedDividendsTaxationChange?: ((election: ReportedDividendsTaxation) => void) | undefined;
+}
+
+export interface ReportingPlannerViewProps {
+  /** Evaluated reporting plans and search progress to display. */
+  planState: UseReportingPlansResult;
+  /** Applies a row's plan: every entry's reporting flags. */
+  onStreamsChange: (streams: IncomeStream[]) => void;
+  /** Applies a row's plan: the election its reported dividends, if any, are taxed under. */
+  onReportedDividendsTaxationChange?: ((election: ReportedDividendsTaxation) => void) | undefined;
+  /** Whether the accordion is expanded. */
+  expanded: boolean;
+  /** Notifies the caller when the user expands or collapses the accordion. */
+  onExpandedChange: (expanded: boolean) => void;
 }
 
 const FIGURE_COLUMNS: readonly { key: keyof PlanFigures; label: string }[] = [
@@ -227,8 +241,9 @@ const PlanRows = React.memo(function PlanRows({ rows, isMobile, bounded, onApply
             }}
           >
             <ReferenceTable
-              headers={([''] as React.ReactNode[]).concat(
-                rows.map(row => (
+              headers={[
+                '',
+                ...rows.map(row => (
                   <Box
                     key={row.key}
                     component="span"
@@ -249,12 +264,14 @@ const PlanRows = React.memo(function PlanRows({ rows, isMobile, bounded, onApply
                     )}
                   </Box>
                 )),
-              )}
-              rows={FIGURE_COLUMNS.map(column =>
-                ([column.label] as React.ReactNode[]).concat(
-                  rows.map(row => formatJPY(row.evaluated.figures[column.key])),
-                ),
-              )}
+              ]}
+              rows={FIGURE_COLUMNS.map(column => {
+                const cells: React.ReactNode[] = [column.label];
+                for (const row of rows) {
+                  cells.push(formatJPY(row.evaluated.figures[column.key]));
+                }
+                return cells;
+              })}
             />
           </Box>
           <Stack spacing={1} sx={{ mt: 1.5 }}>
@@ -280,15 +297,15 @@ const PlanRows = React.memo(function PlanRows({ rows, isMobile, bounded, onApply
 });
 
 /**
- * Searches the ways to report the capital-gains and dividends entries that are not already fixed
- * — one election per account and per domestic dividend — and shows, for each, the same figures
- * the summary and tabs use. Collapsed by default: {@link useReportingPlans} runs the
- * search only once expanded, and again whenever the inputs change while it stays open.
+ * Presentational view for {@link ReportingPlanner}, separated so callers and tests can supply
+ * {@link UseReportingPlansResult} directly without mocking the search hook.
  */
-export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
-  inputs,
+export const ReportingPlannerView: React.FC<ReportingPlannerViewProps> = ({
+  planState,
   onStreamsChange,
   onReportedDividendsTaxationChange,
+  expanded,
+  onExpandedChange,
 }) => {
   const theme = useTheme();
   // The dialog is about 550px wide, which fits a column per plan but not a column per figure,
@@ -296,9 +313,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
   // neither, so each plan gets its own two-column table there, as the comparison this replaces
   // did for each election.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [expanded, setExpanded] = useState(false);
-  const { rows, mandatoryNote, progress, showProgress, bounded, boundedEstimate } =
-    useReportingPlans(inputs, expanded);
+  const { rows, mandatoryNote, progress, showProgress, bounded, boundedEstimate } = planState;
 
   // The latest handlers behind one stable callback, so the memoised plan rows are not
   // re-rendered by a new function identity on every render of the dialog.
@@ -314,7 +329,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
   return (
     <Accordion
       expanded={expanded}
-      onChange={(_, isExpanded) => setExpanded(isExpanded)}
+      onChange={(_, isExpanded) => onExpandedChange(isExpanded)}
       disableGutters
       sx={{ mt: 1 }}
     >
@@ -370,6 +385,31 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
         )}
       </AccordionDetails>
     </Accordion>
+  );
+};
+
+/**
+ * Searches the ways to report the capital-gains and dividends entries that are not already fixed
+ * — one election per account and per domestic dividend — and shows, for each, the same figures
+ * the summary and tabs use. Collapsed by default: {@link useReportingPlans} runs the
+ * search only once expanded, and again whenever the inputs change while it stays open.
+ */
+export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
+  inputs,
+  onStreamsChange,
+  onReportedDividendsTaxationChange,
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const planState = useReportingPlans(inputs, expanded);
+
+  return (
+    <ReportingPlannerView
+      planState={planState}
+      expanded={expanded}
+      onExpandedChange={setExpanded}
+      onStreamsChange={onStreamsChange}
+      onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
+    />
   );
 };
 

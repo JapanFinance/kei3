@@ -12,16 +12,22 @@ import React from 'react';
 
 import { SimpleTooltip } from '../ui/Tooltips';
 
-const labelTooltips: Record<string, string> = {
-  'Health Insurance': 'Mandatory health insurance contributions.',
-  'Pension Payments': 'Employees/National pension system contributions.',
-  'Employment Insurance': 'Insurance for unemployment and work-related benefits.',
-  'Income Tax':
+const labelTooltips = new Map<string, string>([
+  ['Health Insurance', 'Mandatory health insurance contributions.'],
+  ['Pension Payments', 'Employees/National pension system contributions.'],
+  ['Employment Insurance', 'Insurance for unemployment and work-related benefits.'],
+  [
+    'Income Tax',
     'Income tax paid to the national government, and any foreign tax paid on the income abroad.',
-  'Residence Tax':
+  ],
+  [
+    'Residence Tax',
     'Local income tax paid to the local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If income fluctuates from year to year, consider the effect on the residence tax billed in arrears.',
-  'Total Deductions': 'Sum of all taxes and social insurance payments.',
-};
+  ],
+  ['Total Deductions', 'Sum of all taxes and social insurance payments.'],
+]);
+
+const isStringLabel = (value: React.ReactNode): value is string => typeof value === 'string';
 
 const iconMap: Record<string, React.ReactNode> = {
   // Icons can be added here in the future if needed
@@ -201,12 +207,14 @@ export const ResultRow: React.FC<ResultRowProps> = ({
   const rightColumnLayoutSx: SxProps<Theme> = { flexShrink: 0, ml: 'auto', textAlign: 'right' };
 
   // Add tooltip and icon if available
+  const labelKey = isStringLabel(label) ? label : undefined;
   const labelText = (
     <>
-      {iconMap[typeof label === 'string' ? label : ''] || null}
+      {iconMap[labelKey ?? ''] || null}
       {label}
     </>
   );
+  const labelTooltip = labelKey !== undefined ? labelTooltips.get(labelKey) : undefined;
   const labelRow = (
     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
       {disclosure ? (
@@ -241,9 +249,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       ) : (
         labelText
       )}
-      {typeof label === 'string' && labelTooltips[label] && (
-        <SimpleTooltip>{labelTooltips[label]}</SimpleTooltip>
-      )}
+      {labelTooltip && <SimpleTooltip>{labelTooltip}</SimpleTooltip>}
       {labelSuffix}
     </Box>
   );

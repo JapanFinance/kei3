@@ -382,6 +382,11 @@ function countQualifiedDependentsFromBreakdown(
   return countDependentsWithinEligibilityIncome([...uniqueDependents.values()], year);
 }
 
+export interface ResidenceTaxExemptionLimits {
+  perCapitaLimit: number;
+  incomeBasedLimit: number;
+}
+
 /**
  * Calculates the non-taxable limits for residence tax (Tokyo 23 wards standard).
  *
@@ -402,10 +407,9 @@ function countQualifiedDependentsFromBreakdown(
  * @returns Object containing both net income limits
  * @see https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/hikazeikijun/juuminzei-hikazei.html
  */
-export function getResidenceTaxExemptionLimits(qualifiedDependentsCount: number): {
-  perCapitaLimit: number;
-  incomeBasedLimit: number;
-} {
+export function getResidenceTaxExemptionLimits(
+  qualifiedDependentsCount: number,
+): ResidenceTaxExemptionLimits {
   if (qualifiedDependentsCount === 0) {
     return {
       perCapitaLimit: 450_000,

@@ -328,10 +328,11 @@ async function runOnce(url, skipAudits, extraSettings = {}) {
   });
   try {
     const flags = { port: chrome.port, output: 'html', logLevel: 'error' };
+    const baseSettings = FORM_FACTOR === 'desktop' ? DESKTOP_CONFIG.settings : {};
     const config = {
       extends: 'lighthouse:default',
       settings: {
-        ...(FORM_FACTOR === 'desktop' ? DESKTOP_CONFIG.settings : {}),
+        ...baseSettings,
         skipAudits: skipAudits ?? [],
         ...extraSettings,
       },
@@ -508,8 +509,8 @@ async function resolvePreviewUrl({ repo, prNumber, headSha, token }) {
   const headers = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+  if (token) headers.Authorization = `Bearer ${token}`;
   const shaPrefix = headSha.slice(0, 8);
   const deadline = Date.now() + 8 * 60 * 1000; // 8 min
 

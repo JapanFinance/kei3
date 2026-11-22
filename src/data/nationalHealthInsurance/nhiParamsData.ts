@@ -14,7 +14,7 @@ import type {
  * Each region contains a time-series of rate periods sorted newest-first.
  * Use getNHIParamsForMonth() to look up the applicable rates for a given date.
  */
-const allNHIRegions: Record<string, NHIRegionDefinition> = {
+const allNHIRegions = {
   'Tokyo-Chiyoda': {
     regionName: 'Chiyoda Ward, Tokyo / 千代田区',
     periods: [
@@ -1055,7 +1055,7 @@ const allNHIRegions: Record<string, NHIRegionDefinition> = {
     ],
   },
   // Add more regions/municipalities as needed
-};
+} satisfies Record<string, NHIRegionDefinition>;
 
 const periodsByRegion = Object.fromEntries(
   Object.entries(allNHIRegions).map(([regionKey, { regionName, periods }]) => [
@@ -1108,6 +1108,7 @@ export type NHIParamsField = {
     : never;
 }[keyof NationalHealthInsuranceRegionParams];
 
+// SAFETY: the object literal satisfies Record<NHIParamsField, true>, so its keys are NHIParamsField[].
 const ALL_NHI_PARAMS_FIELDS = Object.keys({
   medicalRate: true,
   supportRate: true,

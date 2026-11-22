@@ -25,6 +25,8 @@ dist-ssr
 
 .wrangler
 .claude
+.agents/
+skills-lock.json
 
 # bundle-size report written during CI
 size-report.json

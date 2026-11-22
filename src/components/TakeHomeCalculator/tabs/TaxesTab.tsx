@@ -208,16 +208,20 @@ const withheldBaseRows = (
     ]
       .filter(Boolean)
       .join(', ')})`;
-  return [
-    ...base.accounts.map((account): [string, number] => [accountLabel(account), account.base]),
-    ...(base.dividends !== 0
-      ? [['Dividends (other accounts)', base.dividends] as [string, number]]
-      : []),
-    ...(base.dividendsForeignTax
-      ? [['Less foreign tax on those dividends', -base.dividendsForeignTax] as [string, number]]
-      : []),
-    ...(base.interest !== 0 ? [['Interest paid in Japan', base.interest] as [string, number]] : []),
-  ];
+  const rows: [string, number][] = base.accounts.map(account => [
+    accountLabel(account),
+    account.base,
+  ]);
+  if (base.dividends !== 0) {
+    rows.push(['Dividends (other accounts)', base.dividends]);
+  }
+  if (base.dividendsForeignTax) {
+    rows.push(['Less foreign tax on those dividends', -base.dividendsForeignTax]);
+  }
+  if (base.interest !== 0) {
+    rows.push(['Interest paid in Japan', base.interest]);
+  }
+  return rows;
 };
 
 /**

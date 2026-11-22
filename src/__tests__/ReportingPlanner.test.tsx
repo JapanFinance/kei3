@@ -1,14 +1,15 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ReportingPlanner } from '../components/TakeHomeCalculator/Income/ReportingPlanner';
 import {
-  useReportingPlans,
+  ReportingPlanner,
+  ReportingPlannerView,
+} from '../components/TakeHomeCalculator/Income/ReportingPlanner';
+import {
   type ReportingRow,
   type UseReportingPlansResult,
 } from '../components/TakeHomeCalculator/Income/useReportingPlans';
@@ -19,16 +20,7 @@ import {
   type TakeHomeInputs,
 } from '../types/tax';
 import type { EvaluatedPlan, PlanFigures } from '../utils/reportingPlanner';
-
-vi.mock('../components/TakeHomeCalculator/Income/useReportingPlans', async importOriginal => ({
-  ...(await importOriginal<
-    typeof import('../components/TakeHomeCalculator/Income/useReportingPlans')
-  >()),
-  useReportingPlans: vi.fn(),
-}));
-
-const mockedUseReportingPlans = vi.mocked(useReportingPlans);
-const mockedUseMediaQuery = vi.mocked(useMediaQuery);
+import { stubViewportWidth } from './fixtures/matchMedia';
 
 const streamA: IncomeStream = {
   id: 'a',
@@ -86,18 +78,18 @@ const inputs: TakeHomeInputs = {
   incomeYear: 2026,
 };
 
-const setResult = (result: Partial<UseReportingPlansResult>) => {
-  mockedUseReportingPlans.mockReturnValue({
-    rows: undefined,
-    bestPlan: undefined,
-    mandatoryNote: undefined,
-    progress: undefined,
-    showProgress: false,
-    bounded: false,
-    boundedEstimate: undefined,
-    ...result,
-  });
-};
+const makePlanState = (
+  overrides: Partial<UseReportingPlansResult> = {},
+): UseReportingPlansResult => ({
+  rows: undefined,
+  bestPlan: undefined,
+  mandatoryNote: undefined,
+  progress: undefined,
+  showProgress: false,
+  bounded: false,
+  boundedEstimate: undefined,
+  ...overrides,
+});
 
 const expandPanel = async () => {
   const user = userEvent.setup();
@@ -106,13 +98,20 @@ const expandPanel = async () => {
 };
 
 describe('ReportingPlanner', () => {
-  beforeEach(() => {
-    mockedUseReportingPlans.mockReset();
-    mockedUseMediaQuery.mockReturnValue(false);
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it('renders each row with its label and figures', async () => {
-    setResult({
+  it('computes and displays real reporting plans when expanded', async () => {
+    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
+
+    await expandPanel();
+    expect(await screen.findByText('Current')).toBeInTheDocument();
+    expect(screen.getAllByText('Best').length).toBeGreaterThan(0);
+  });
+
+  it('renders each row with its label and figures', () => {
+    const planState = makePlanState({
       rows: [
         row({
           key: 'current',
@@ -133,13 +132,14 @@ describe('ReportingPlanner', () => {
     });
 
     render(
-      <ReportingPlanner
-        inputs={inputs}
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
         onStreamsChange={vi.fn()}
         onReportedDividendsTaxationChange={vi.fn()}
       />,
     );
-    await expandPanel();
 
     expect(screen.getByText('Current')).toBeInTheDocument();
     // The table's column heading and the change list's title both read "Best".
@@ -159,7 +159,7 @@ describe('ReportingPlanner', () => {
     const onReportedDividendsTaxationChange = vi.fn();
     const bestStreams: IncomeStream[] = [{ ...streamA, reportsCapitalGains: true }];
 
-    setResult({
+    const planState = makePlanState({
       rows: [
         row({ key: 'current', label: 'Current', canApply: false }),
         row({
@@ -175,14 +175,16 @@ describe('ReportingPlanner', () => {
       ],
     });
 
+    const user = userEvent.setup();
     render(
-      <ReportingPlanner
-        inputs={inputs}
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
         onStreamsChange={onStreamsChange}
         onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
       />,
     );
-    const user = await expandPanel();
 
     // Current offers no Apply button at all.
     expect(screen.queryAllByRole('button', { name: 'Apply' })).toHaveLength(1);
@@ -194,19 +196,26 @@ describe('ReportingPlanner', () => {
 
   it('works without an election callback', async () => {
     const onStreamsChange = vi.fn();
-    setResult({
+    const planState = makePlanState({
       rows: [row({ key: 'best', label: 'Best', canApply: true })],
     });
 
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={onStreamsChange} />);
-    const user = await expandPanel();
+    const user = userEvent.setup();
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
+        onStreamsChange={onStreamsChange}
+      />,
+    );
 
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     expect(onStreamsChange).toHaveBeenCalledExactlyOnceWith([streamA]);
   });
 
-  it('shows "Best found" and the bounded caption when the search was bounded', async () => {
-    setResult({
+  it('shows "Best found" and the bounded caption when the search was bounded', () => {
+    const planState = makePlanState({
       bounded: true,
       boundedEstimate: { count: 12_345, predictedMs: 3_500 },
       rows: [
@@ -220,8 +229,14 @@ describe('ReportingPlanner', () => {
       ],
     });
 
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
-    await expandPanel();
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
+        onStreamsChange={vi.fn()}
+      />,
+    );
 
     expect(screen.getAllByText('Best found').length).toBeGreaterThan(0);
     expect(screen.getByText(/The search was bounded/)).toBeInTheDocument();
@@ -229,8 +244,8 @@ describe('ReportingPlanner', () => {
     expect(screen.getByText(/3\.5 seconds/)).toBeInTheDocument();
   });
 
-  it('says the current choices already keep the most when Best equals Current, and offers no Apply for it', async () => {
-    setResult({
+  it('says the current choices already keep the most when Best equals Current, and offers no Apply for it', () => {
+    const planState = makePlanState({
       rows: [
         // One row for both: the plan found to keep the most is the current one.
         row({
@@ -243,17 +258,23 @@ describe('ReportingPlanner', () => {
       ],
     });
 
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
-    await expandPanel();
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
+        onStreamsChange={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('The current choices already maximize take-home.')).toBeInTheDocument();
     expect(screen.queryByText('should not be shown')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument();
   });
 
-  it('tags a uniform plan that is both Current and Best instead of repeating it', async () => {
-    mockedUseMediaQuery.mockReturnValue(true);
-    setResult({
+  it('tags a uniform plan that is both Current and Best instead of repeating it', () => {
+    stubViewportWidth(375);
+    const planState = makePlanState({
       rows: [
         row({
           key: 'withheldOnly',
@@ -265,8 +286,14 @@ describe('ReportingPlanner', () => {
       ],
     });
 
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
-    await expandPanel();
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
+        onStreamsChange={vi.fn()}
+      />,
+    );
 
     expect(screen.getAllByRole('table')).toHaveLength(2);
     expect(screen.getByText('All withheld only')).toBeInTheDocument();
@@ -276,23 +303,29 @@ describe('ReportingPlanner', () => {
     expect(screen.getAllByRole('button', { name: 'Apply' })).toHaveLength(1);
   });
 
-  it('shows a determinate search indicator while an exhaustive search reports progress', async () => {
-    setResult({
+  it('shows a determinate search indicator while an exhaustive search reports progress', () => {
+    const planState = makePlanState({
       showProgress: true,
       progress: { done: 4, count: 10 },
       rows: [row({ key: 'current', label: 'Current' }), row({ key: 'best', label: 'Best' })],
     });
 
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
-    await expandPanel();
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
+        onStreamsChange={vi.fn()}
+      />,
+    );
 
     const progressbar = screen.getByRole('progressbar');
     expect(progressbar).toHaveAttribute('aria-valuenow', '40');
     expect(screen.getByText('Searching: 4 of 10 plans')).toBeInTheDocument();
   });
 
-  it('shows an indeterminate search indicator with the count so far once the search is bounded', async () => {
-    setResult({
+  it('shows an indeterminate search indicator with the count so far once the search is bounded', () => {
+    const planState = makePlanState({
       showProgress: true,
       progress: { done: 250 },
       bounded: true,
@@ -300,16 +333,22 @@ describe('ReportingPlanner', () => {
       rows: [row({ key: 'current', label: 'Current' }), row({ key: 'best', label: 'Best found' })],
     });
 
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
-    await expandPanel();
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
+        onStreamsChange={vi.fn()}
+      />,
+    );
 
     expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
     expect(screen.getByText('Searching: 250 plans checked')).toBeInTheDocument();
   });
 
-  it('renders one two-column block per plan on a phone screen', async () => {
-    mockedUseMediaQuery.mockReturnValue(true);
-    setResult({
+  it('renders one two-column block per plan on a phone screen', () => {
+    stubViewportWidth(375);
+    const planState = makePlanState({
       rows: [
         row({
           key: 'current',
@@ -325,8 +364,14 @@ describe('ReportingPlanner', () => {
       ],
     });
 
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
-    await expandPanel();
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded
+        onExpandedChange={vi.fn()}
+        onStreamsChange={vi.fn()}
+      />,
+    );
 
     // Each plan gets its own table (mirroring the desktop table's one row become one table),
     // rather than one shared multi-column table.
@@ -336,8 +381,15 @@ describe('ReportingPlanner', () => {
   });
 
   it('shows nothing while the search has not produced rows yet', () => {
-    setResult({ rows: undefined });
-    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
+    const planState = makePlanState({ rows: undefined });
+    render(
+      <ReportingPlannerView
+        planState={planState}
+        expanded={false}
+        onExpandedChange={vi.fn()}
+        onStreamsChange={vi.fn()}
+      />,
+    );
     expect(screen.getByRole('button', { name: /optimize reporting options/i })).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });

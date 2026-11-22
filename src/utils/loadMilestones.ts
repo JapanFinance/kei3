@@ -33,7 +33,7 @@ export function useLoadMilestone(name: LoadMilestone): void {
   useEffect(() => {
     if (marked.has(name)) return;
     marked.add(name);
-    if (typeof requestAnimationFrame !== 'function') {
+    if (typeof requestAnimationFrame === 'undefined') {
       performance.mark(name);
       return;
     }

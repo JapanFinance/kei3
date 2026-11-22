@@ -294,19 +294,9 @@ const codeSplitting = {
 };
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => ({
-  define: changelogDefine(),
-  plugins: [
-    cloudflare(mode === 'preview' ? { config: applyPreviewWorkerConfig } : undefined),
-    stripHtmlComments(),
-    dropImportMapAsset(),
-    securityHeaders({ reportEndpoint: CSP_REPORT_ENDPOINT }),
-    react(),
-    Sitemap({
-      hostname: 'https://kei3.japanfinance.org/',
-      generateRobotsTxt: true,
-      robots: [], // Only include the sitemap in robots.txt
-    }),
+export default defineConfig(({ mode }) => {
+  // SAFETY: rollup-plugin-visualizer returns a Rollup Plugin compatible with Vite's PluginOption.
+  const analyzePlugin =
     mode === 'analyze'
       ? (visualizer({
           filename: 'dist/stats.html',
@@ -314,24 +304,40 @@ export default defineConfig(({ mode }) => ({
           gzipSize: true,
           brotliSize: true,
         }) as PluginOption)
-      : null,
-  ],
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    // Chunks reference each other through stable ids resolved by an import
-    // map in index.html, so a deploy re-downloads only the chunks whose own
-    // modules changed instead of every chunk that imports them.
-    chunkImportMap: true,
-    sourcemap: true,
-    rolldownOptions: {
-      output: {
-        codeSplitting,
+      : null;
+
+  return {
+    define: changelogDefine(),
+    plugins: [
+      cloudflare(mode === 'preview' ? { config: applyPreviewWorkerConfig } : undefined),
+      stripHtmlComments(),
+      dropImportMapAsset(),
+      securityHeaders({ reportEndpoint: CSP_REPORT_ENDPOINT }),
+      react(),
+      Sitemap({
+        hostname: 'https://kei3.japanfinance.org/',
+        generateRobotsTxt: true,
+        robots: [], // Only include the sitemap in robots.txt
+      }),
+      analyzePlugin,
+    ],
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      // Chunks reference each other through stable ids resolved by an import
+      // map in index.html, so a deploy re-downloads only the chunks whose own
+      // modules changed instead of every chunk that imports them.
+      chunkImportMap: true,
+      sourcemap: true,
+      rolldownOptions: {
+        output: {
+          codeSplitting,
+        },
       },
+      chunkSizeWarningLimit: 1000,
     },
-    chunkSizeWarningLimit: 1000,
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-dom/client'],
-  },
-}));
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-dom/client'],
+    },
+  };
+});

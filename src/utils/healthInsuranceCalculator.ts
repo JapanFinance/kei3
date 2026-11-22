@@ -449,6 +449,8 @@ export interface EmployeesHealthInsuranceBonusBreakdownItem {
  */
 export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
 
+const isProviderId = (value: string | EmployeeRates): value is string => typeof value === 'string';
+
 /**
  * Calculates detailed breakdown for health insurance bonuses.
  *
@@ -457,16 +459,31 @@ export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
  */
 export function calculateEmployeesHealthInsuranceBonusBreakdown(
   bonuses: BonusIncomeStream[],
+  providerId: string,
+  region: string,
+  year: number,
+  isSubjectToLongTermCarePremium: boolean,
+): EmployeesHealthInsuranceBonusBreakdownItem[];
+export function calculateEmployeesHealthInsuranceBonusBreakdown(
+  bonuses: BonusIncomeStream[],
+  staticRates: EmployeeRates,
+  isSubjectToLongTermCarePremium: boolean,
+  year: number,
+): EmployeesHealthInsuranceBonusBreakdownItem[];
+export function calculateEmployeesHealthInsuranceBonusBreakdown(
+  bonuses: BonusIncomeStream[],
   providerOrRates: string | EmployeeRates,
   regionOrLTC: string | boolean,
   year: number,
   isSubjectToLongTermCarePremium?: boolean,
 ): EmployeesHealthInsuranceBonusBreakdownItem[] {
   // Determine whether we're using time-series lookup or static rates
-  const useTimeSeries = typeof providerOrRates === 'string';
+  const useTimeSeries = isProviderId(providerOrRates);
   const providerId = useTimeSeries ? providerOrRates : undefined;
+  // SAFETY: public overload pairs string providerId with string region; EmployeeRates pairs with boolean includeLTC.
   const region = useTimeSeries ? (regionOrLTC as string) : undefined;
   const staticRates = useTimeSeries ? undefined : providerOrRates;
+  // SAFETY: public overload pairs EmployeeRates with boolean includeLTC; string providerId pairs with boolean 5th argument.
   const includeLTC = useTimeSeries ? isSubjectToLongTermCarePremium! : (regionOrLTC as boolean);
 
   // Sort bonuses by month to apply cumulative cap correctly
@@ -618,55 +635,20 @@ function calculateNationalHealthInsuranceFiscalYearPortions(
 }
 
 /**
- * Calculates National Health Insurance premium with breakdown, blending two fiscal years.
- *
- * NHI premiums for non-pensioners (普通徴収) are paid in 10 equal installments from June
- * through March. A calendar year therefore straddles two fiscal years:
- *   - Jan, Feb, Mar: 3 remaining installments of the *previous* FY → 3/10 of that annual premium
- *   - Apr, May: no NHI payments
- *   - Jun–Dec: 7 of 10 installments of the *current* FY → 7/10 of that annual premium
- *
- * Formula: CY amount = FY(N-1) annual × 3/10 + FY(N) annual × 7/10
- *
- * When both fiscal years resolve to the same parameters (or previous fiscal year data is absent),
- * 3/10 + 7/10 = 1 produces the single-fiscal-year calculation.
+ * Blends a calendar year's National Health Insurance breakdown directly from resolved fiscal-year
+ * parameters (3/10 previous FY + 7/10 current FY).
  */
-export function calculateNationalHealthInsurancePremiumWithBreakdown(
+export function calculateNationalHealthInsuranceBreakdownFromParams(
   netIncome: number,
   isSubjectToLongTermCarePremium: boolean,
   year: number,
-  region?: string,
+  currFYParams: NationalHealthInsuranceRegionParams,
+  prevFYParams?: NationalHealthInsuranceRegionParams,
 ): NationalHealthInsuranceBreakdown {
-  const regionKey = region as string;
-
-  // Look up rates for the two fiscal years that overlap this calendar year:
-  // - January (month 0) resolves to the previous fiscal year's rates
-  // - April (month 3) resolves to the current fiscal year's rates
-  const prevFYParams = getNHIParamsForMonth(regionKey, year, 0);
-  const currFYParams = getNHIParamsForMonth(regionKey, year, 3);
-
   // The low-income reduction tier is judged per fiscal year: the annual threshold revision
   // can move the same income into a different tier across the April boundary.
   const prevReductionRatio = getNHIPremiumReductionRatioForMonth(netIncome, year, 0);
   const currReductionRatio = getNHIPremiumReductionRatioForMonth(netIncome, year, 3);
-
-  if (!currFYParams) {
-    console.error(
-      `National Health Insurance parameters not found for region: ${region}. Returning zero breakdown.`,
-    );
-    return {
-      medicalPortion: 0,
-      elderlySupportPortion: 0,
-      longTermCarePortion: 0,
-      childSupportPortion: 0,
-      total: 0,
-      reductionRatios: { prevFY: 0, currFY: 0 },
-      medicalCapped: false,
-      elderlySupportCapped: false,
-      longTermCareCapped: false,
-      childSupportCapped: false,
-    };
-  }
 
   // Calculate every portion for each fiscal year
   const currFY = calculateNationalHealthInsuranceFiscalYearPortions(
@@ -719,6 +701,59 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
     longTermCareCapped: blendCapped('longTermCare'),
     childSupportCapped: blendCapped('childSupport'),
   };
+}
+
+/**
+ * Calculates National Health Insurance premiums for a calendar year with breakdown.
+ *
+ * A calendar year (Jan–Dec) spans two fiscal years:
+ *   - Previous FY (Jan–Mar): 3/10 of annual premium (10-installment Jun–Mar schedule)
+ *   - Current FY  (Apr–Dec): 7/10 of annual premium
+ *
+ * Formula: CY amount = FY(N-1) annual × 3/10 + FY(N) annual × 7/10
+ *
+ * When both fiscal years resolve to the same parameters (or previous fiscal year data is absent),
+ * 3/10 + 7/10 = 1 produces the single-fiscal-year calculation.
+ */
+export function calculateNationalHealthInsurancePremiumWithBreakdown(
+  netIncome: number,
+  isSubjectToLongTermCarePremium: boolean,
+  year: number,
+  region?: string,
+): NationalHealthInsuranceBreakdown {
+  const regionKey = region ?? '';
+
+  // Look up rates for the two fiscal years that overlap this calendar year:
+  // - January (month 0) resolves to the previous fiscal year's rates
+  // - April (month 3) resolves to the current fiscal year's rates
+  const prevFYParams = getNHIParamsForMonth(regionKey, year, 0);
+  const currFYParams = getNHIParamsForMonth(regionKey, year, 3);
+
+  if (!currFYParams) {
+    console.error(
+      `National Health Insurance parameters not found for region: ${region}. Returning zero breakdown.`,
+    );
+    return {
+      medicalPortion: 0,
+      elderlySupportPortion: 0,
+      longTermCarePortion: 0,
+      childSupportPortion: 0,
+      total: 0,
+      reductionRatios: { prevFY: 0, currFY: 0 },
+      medicalCapped: false,
+      elderlySupportCapped: false,
+      longTermCareCapped: false,
+      childSupportCapped: false,
+    };
+  }
+
+  return calculateNationalHealthInsuranceBreakdownFromParams(
+    netIncome,
+    isSubjectToLongTermCarePremium,
+    year,
+    currFYParams,
+    prevFYParams,
+  );
 }
 
 /**

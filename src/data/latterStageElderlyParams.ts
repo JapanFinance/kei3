@@ -434,6 +434,7 @@ export function getLatterStageParamsForMonth(
   };
 }
 
+// SAFETY: Object.keys returns string[], and PREFECTURE_NAMES keys are every Prefecture.
 export const LATTER_STAGE_REGIONS = Object.keys(PREFECTURE_NAMES) as Prefecture[];
 
 /** Prefecture options for the region dropdown, analogous to the NHI region options. */
