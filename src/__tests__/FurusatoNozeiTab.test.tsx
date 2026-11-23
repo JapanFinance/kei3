@@ -1,10 +1,11 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNozeiTab';
+import { FURUSATO_SOURCES } from '../data/furusatoNozei';
 import { percentTo } from '../data/rate';
 import type {
   ForeignTaxCreditResult,
@@ -244,10 +245,106 @@ describe('FurusatoNozeiTab Effective Return Analysis', () => {
 
     expect(screen.getByText('≈ ¥15,900')).toBeInTheDocument();
     expect(screen.getByText('≈ ¥13,900')).toBeInTheDocument();
-    expect(screen.getByText(/Estimated at 26\.5% of donation amount/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'average Furusato Nozei gift cost' })).toHaveAttribute(
+    expect(
+      screen.getByText(/Estimated at 26\.5% of donation amount for goods/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'MIC Furusato Nozei status survey' })).toHaveAttribute(
       'href',
-      'https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03',
+      FURUSATO_SOURCES.micArchive,
     );
+  });
+});
+
+describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
+  it('renders collapsed below ¥500,000 and expands to show goods, shipping, and remaining allowance', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 60_000,
+        incomeTaxReduction: 5_800,
+        residenceTaxReduction: 52_200,
+        outOfPocketCost: 2_000,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    const toggleButton = screen.getByRole('button', {
+      name: /Temporary Income Estimate \(一時所得\)/,
+    });
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText('Under ¥500,000 deduction (¥0 taxable alone)')).toBeInTheDocument();
+    expect(screen.getByText('≈ ¥19,320')).toBeInTheDocument();
+    expect(screen.queryByText('Estimated shipping (5.7%)')).not.toBeInTheDocument();
+
+    fireEvent.click(toggleButton);
+
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
+    const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
+    expect(within(details).getByText('Goods received (26.5%)')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥15,900')).toBeInTheDocument();
+    expect(within(details).getByText('Estimated shipping (5.7%)')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥3,420')).toBeInTheDocument();
+    expect(within(details).getByText('Remaining deduction allowance')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥480,680')).toBeInTheDocument();
+    expect(within(details).getByText('Taxable temporary income (½)')).toBeInTheDocument();
+    expect(within(details).getByText('¥0')).toBeInTheDocument();
+  });
+
+  it('auto-expands above ¥500,000, calculates estimated tax, and reduces Net Estimated Benefit', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      taxableIncomeForNationalIncomeTax: 45_000_000,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 2_200_000,
+        incomeTaxReduction: 1_009_900,
+        residenceTaxReduction: 1_188_100,
+        outOfPocketCost: 2_000,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    const toggleButton = screen.getByRole('button', {
+      name: /Temporary Income Estimate \(一時所得\)/,
+    });
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByText('Exceeds ¥500,000 deduction (assuming no other temporary income)'),
+    ).toBeInTheDocument();
+
+    // Effective Return Analysis deducts the estimated temporary income tax (¥58,294)
+    expect(screen.getByText('Estimated Tax on Temporary Income')).toBeInTheDocument();
+    expect(screen.getByText('≈ -¥58,294')).toBeInTheDocument();
+    // ¥583,000 goods - ¥2,000 out-of-pocket - ¥58,294 tax = ¥522,706
+    expect(screen.getByText('≈ ¥522,706')).toBeInTheDocument();
+
+    const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
+    expect(within(details).getByText('≈ ¥583,000')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥125,400')).toBeInTheDocument();
+    expect(within(details).getByText('-¥500,000')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥208,400')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥104,200')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥58,294')).toBeInTheDocument();
+
+    // Official legal and statistical source links are present in the tooltip
+    expect(screen.getByRole('link', { name: /令和4年2月7日裁決/ })).toHaveAttribute(
+      'href',
+      FURUSATO_SOURCES.kfsDecision2022,
+    );
+    expect(screen.getByRole('link', { name: /横浜地裁 令和6年2月14日判決/ })).toHaveAttribute(
+      'href',
+      FURUSATO_SOURCES.yokohamaDistrictCourt2024Pdf,
+    );
+    expect(screen.getByRole('link', { name: /東京高裁 令和6年12月11日判決/ })).toHaveAttribute(
+      'href',
+      FURUSATO_SOURCES.tokyoHighCourt2024Pdf,
+    );
+    expect(screen.getByRole('link', { name: /令和8年度調査結果/ })).toHaveAttribute(
+      'href',
+      FURUSATO_SOURCES.micFy2025Pdf,
+    );
+
+    // User can manually collapse the auto-expanded section
+    fireEvent.click(toggleButton);
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
   });
 });

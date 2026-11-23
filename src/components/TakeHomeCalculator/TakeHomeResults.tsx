@@ -10,7 +10,10 @@ import Typography from '@mui/material/Typography';
 import React from 'react';
 
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
-import { hasHighOutOfPocketCost } from '../../utils/furusatoNozei';
+import {
+  hasHighOutOfPocketCost,
+  hasTaxableFurusatoTemporaryIncome,
+} from '../../utils/furusatoNozei';
 import { useLoadMilestone } from '../../utils/loadMilestones';
 import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';
@@ -49,32 +52,48 @@ const TAB_LABELS: readonly { head: string; tail?: string }[] = [
   { head: 'Furusato', tail: ' Nozei' },
 ];
 
-const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number], furusatoWarning: boolean) => (
-  // A single element keeps the wording on one line: MUI lays a Tab's children
-  // out as a flex column, so a bare text node and the tail would stack.
-  <span>
-    {head}
-    {tail && (
-      <Box component="span" sx={narrowTabs({ display: 'none' }, furusatoWarning)}>
-        {tail}
-      </Box>
-    )}
-    {furusatoWarning && head === 'Furusato' && (
-      <WarningIcon
-        titleAccess="High out-of-pocket cost"
-        color="warning"
-        sx={{ ml: 0.5, fontSize: '1rem', verticalAlign: 'text-bottom' }}
-      />
-    )}
-  </span>
-);
+const renderTabLabel = (
+  { head, tail }: (typeof TAB_LABELS)[number],
+  furusatoWarningTitle: string | undefined,
+) => {
+  const furusatoWarning = furusatoWarningTitle !== undefined;
+  return (
+    // A single element keeps the wording on one line: MUI lays a Tab's children
+    // out as a flex column, so a bare text node and the tail would stack.
+    <span>
+      {head}
+      {tail && (
+        <Box component="span" sx={narrowTabs({ display: 'none' }, furusatoWarning)}>
+          {tail}
+        </Box>
+      )}
+      {furusatoWarningTitle && head === 'Furusato' && (
+        <WarningIcon
+          titleAccess={furusatoWarningTitle}
+          color="warning"
+          sx={{ ml: 0.5, fontSize: '1rem', verticalAlign: 'text-bottom' }}
+        />
+      )}
+    </span>
+  );
+};
 
 const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, inputs }) => {
   useLoadMilestone('results-rendered');
 
   const [currentTab, setCurrentTab] = React.useState(0);
 
-  const furusatoWarning = hasHighOutOfPocketCost(results.furusatoNozei);
+  const highOutOfPocketCost = hasHighOutOfPocketCost(results.furusatoNozei);
+  const taxableTemporaryIncome = hasTaxableFurusatoTemporaryIncome(results.furusatoNozei);
+  const furusatoWarningTitle =
+    highOutOfPocketCost && taxableTemporaryIncome
+      ? 'High out-of-pocket cost and estimated taxable temporary income'
+      : highOutOfPocketCost
+        ? 'High out-of-pocket cost'
+        : taxableTemporaryIncome
+          ? 'Estimated taxable temporary income'
+          : undefined;
+  const furusatoWarning = furusatoWarningTitle !== undefined;
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -142,7 +161,7 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
           {TAB_LABELS.map((label, index) => (
             <Tab
               key={label.head}
-              label={renderTabLabel(label, furusatoWarning)}
+              label={renderTabLabel(label, furusatoWarningTitle)}
               id={`tab-${index}`}
               aria-controls={`tabpanel-${index}`}
             />

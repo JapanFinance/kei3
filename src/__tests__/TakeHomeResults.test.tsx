@@ -61,4 +61,44 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     expect(titleEl).toBeInTheDocument();
     expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
   });
+
+  it('renders orange warning icon in Furusato tab label when estimated temporary income is taxable', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 2_200_000,
+        outOfPocketCost: 2_000,
+      }),
+    });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <TakeHomeResultsDisplay results={results} inputs={baseInputs} />
+      </ThemeProvider>,
+    );
+
+    const titleEl = screen.getByTitle('Estimated taxable temporary income');
+    expect(titleEl).toBeInTheDocument();
+    expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
+  });
+
+  it('combines warning title when both out-of-pocket cost and temporary income warnings apply', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 2_200_000,
+        outOfPocketCost: 10_000,
+      }),
+    });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <TakeHomeResultsDisplay results={results} inputs={baseInputs} />
+      </ThemeProvider>,
+    );
+
+    const titleEl = screen.getByTitle(
+      'High out-of-pocket cost and estimated taxable temporary income',
+    );
+    expect(titleEl).toBeInTheDocument();
+    expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
+  });
 });

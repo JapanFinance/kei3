@@ -4,32 +4,52 @@
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
-import { useTheme } from '@mui/material/styles';
+import Collapse from '@mui/material/Collapse';
+import { alpha, useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React from 'react';
+import React, { useState } from 'react';
 
+import {
+  FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE,
+  FURUSATO_AVERAGE_GIFT_COST_RATE,
+  FURUSATO_AVERAGE_SHIPPING_COST_RATE,
+  FURUSATO_SOURCES,
+} from '../../../data/furusatoNozei';
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { hasHighOutOfPocketCost } from '../../../utils/furusatoNozei';
+import {
+  estimateFurusatoTemporaryIncome,
+  hasHighOutOfPocketCost,
+} from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
+import { FurusatoTemporaryIncomeTooltip } from './FurusatoTemporaryIncomeTooltip';
 
 interface FurusatoNozeiTabProps {
   results: TakeHomeResults;
 }
 
-/**
- * Source: 令和8年度調査結果（概要） (FY2025 actuals, published July 31, 2026 — 返礼品の調達に係る費用 26.5%)
- * Archive: https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03
- * PDF: https://www.soumu.go.jp/main_content/001085011.pdf
- */
-const FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE = 0.265;
+const TEMPORARY_INCOME_DETAILS_ID = 'furusato-temporary-income-details';
 
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tempIncome = estimateFurusatoTemporaryIncome(results);
+  const [expandedOverride, setExpandedOverride] = useState<{
+    forTaxable: boolean;
+    expanded: boolean;
+  } | null>(null);
+  const showTemporaryIncomeDetails =
+    expandedOverride?.forTaxable === tempIncome.isTaxable
+      ? expandedOverride.expanded
+      : tempIncome.isTaxable;
+  const handleToggleTemporaryIncome = () =>
+    setExpandedOverride({
+      forTaxable: tempIncome.isTaxable,
+      expanded: !showTemporaryIncomeDetails,
+    });
 
   // If no Furusato Nozei data, show a message
   if (results.furusatoNozei.limit <= 0) {
@@ -46,9 +66,13 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
     );
   }
 
-  const estimatedValueOfGifts = Math.round(
-    results.furusatoNozei.limit * FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE,
-  );
+  const goodsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
+  const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
+  const combinedPct = FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE.toPercent(1);
+  const netEstimatedBenefit =
+    tempIncome.estimatedGoodsValue -
+    results.furusatoNozei.outOfPocketCost -
+    tempIncome.estimatedTotalTax;
   const foreignTaxCredit = results.foreignTaxCredit?.credit;
   const hasForeignTaxCredit =
     foreignTaxCredit !== undefined &&
@@ -365,7 +389,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
 
         <ResultRow
           label="Value of Goods* Received"
-          value={`≈ ${formatJPY(estimatedValueOfGifts)}`}
+          value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
           type="indented"
         />
 
@@ -375,25 +399,183 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           type="indented"
         />
 
+        {tempIncome.estimatedTotalTax > 0 && (
+          <ResultRow
+            label={
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                Estimated Tax on Temporary Income
+                <WarningIcon color="warning" aria-hidden sx={{ ml: 0.5, fontSize: '1rem' }} />
+              </Box>
+            }
+            value={
+              <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
+                ≈ {formatJPY(-tempIncome.estimatedTotalTax)}
+              </Box>
+            }
+            type="indented"
+          />
+        )}
+
         <ResultRow
           label="Net Estimated Benefit"
-          value={`≈ ${formatJPY(estimatedValueOfGifts - results.furusatoNozei.outOfPocketCost)}`}
+          value={`≈ ${formatJPY(netEstimatedBenefit)}`}
           type="subtotal"
         />
+
+        {/* Temporary Income Progressive Disclosure */}
+        <Box
+          sx={
+            tempIncome.isTaxable
+              ? {
+                  mt: 1.5,
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 2,
+                  bgcolor: t => alpha(t.palette.warning.main, 0.06),
+                  border: '1px solid',
+                  borderColor: t => alpha(t.palette.warning.main, 0.28),
+                }
+              : {
+                  mt: 1.5,
+                  pt: 0.75,
+                  borderTop: 1,
+                  borderColor: 'divider',
+                }
+          }
+        >
+          <ResultRow
+            label={
+              tempIncome.isTaxable ? (
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    fontWeight: 600,
+                    color: 'text.primary',
+                  }}
+                >
+                  Temporary Income Estimate (一時所得)
+                  <WarningIcon color="warning" aria-hidden sx={{ ml: 0.5, fontSize: '1rem' }} />
+                </Box>
+              ) : (
+                'Temporary Income Estimate (一時所得)'
+              )
+            }
+            sublabel={
+              tempIncome.isTaxable
+                ? 'Exceeds ¥500,000 deduction (assuming no other temporary income)'
+                : 'Under ¥500,000 deduction (¥0 taxable alone)'
+            }
+            disclosure={{
+              expanded: showTemporaryIncomeDetails,
+              onToggle: handleToggleTemporaryIncome,
+              controlsId: TEMPORARY_INCOME_DETAILS_ID,
+            }}
+            labelSuffix={<FurusatoTemporaryIncomeTooltip estimate={tempIncome} />}
+            value={
+              tempIncome.isTaxable ? (
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  ≈ {formatJPY(tempIncome.estimatedEconomicBenefit)}
+                </Box>
+              ) : (
+                `≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)}`
+              )
+            }
+            type="indented"
+          />
+
+          <Box id={TEMPORARY_INCOME_DETAILS_ID}>
+            <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
+              <ResultRow
+                label={`Goods received (${goodsPct})`}
+                value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
+                type="detail"
+              />
+              <ResultRow
+                label={`Estimated shipping (${shippingPct})`}
+                value={`≈ ${formatJPY(tempIncome.estimatedShippingCost)}`}
+                type="detail"
+              />
+              <ResultRow
+                label={
+                  <span>
+                    Special deduction (特別控除)
+                    <SimpleTooltip>
+                      Annual ¥500,000 deduction shared across all temporary income in the calendar
+                      year.
+                    </SimpleTooltip>
+                  </span>
+                }
+                value={formatJPY(-tempIncome.specialDeduction)}
+                type="detail"
+              />
+              {tempIncome.isTaxable ? (
+                <>
+                  <ResultRow
+                    label="Net temporary income"
+                    value={`≈ ${formatJPY(tempIncome.netTemporaryIncome)}`}
+                    type="detail"
+                  />
+                  <ResultRow
+                    label="Taxable temporary income (½)"
+                    value={
+                      <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
+                        ≈ {formatJPY(tempIncome.taxableTemporaryIncome)}
+                      </Box>
+                    }
+                    type="detail-subtotal"
+                  />
+                  <ResultRow
+                    label="Estimated additional tax"
+                    sublabel={
+                      tempIncome.estimatedTotalTax > 0
+                        ? `Income tax ≈ ${formatJPY(tempIncome.estimatedNationalIncomeTax)} + Residence tax ≈ ${formatJPY(tempIncome.estimatedResidenceTax)}`
+                        : undefined
+                    }
+                    value={`≈ ${formatJPY(tempIncome.estimatedTotalTax)}`}
+                    type="detail"
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'text.secondary', pl: 3.5, pt: 0.5, display: 'block' }}
+                  >
+                    Return gifts (including shipping) count as temporary income in the year
+                    delivered. Assumes no other temporary income; filing a tax return is required
+                    when taxable (One-Stop Exception does not apply).
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <ResultRow
+                    label="Remaining deduction allowance"
+                    value={`≈ ${formatJPY(tempIncome.remainingDeductionAllowance)}`}
+                    type="detail"
+                  />
+                  <ResultRow
+                    label="Taxable temporary income (½)"
+                    value={formatJPY(0)}
+                    type="detail-subtotal"
+                  />
+                </>
+              )}
+            </Collapse>
+          </Box>
+        </Box>
 
         <Typography
           variant="caption"
           sx={{ color: 'text.secondary', fontStyle: 'italic', mt: 1, display: 'block' }}
         >
-          * Estimated at {FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE * 100}% of donation amount,
-          based on the{' '}
+          * Estimated at {goodsPct} of donation amount for goods and {shippingPct} for shipping (
+          {combinedPct} combined), based on the{' '}
           <a
-            href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03"
+            href={FURUSATO_SOURCES.micArchive}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'inherit', textDecoration: 'underline' }}
           >
-            average Furusato Nozei gift cost
+            MIC Furusato Nozei status survey
           </a>
           .
         </Typography>
