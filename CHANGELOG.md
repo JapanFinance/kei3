@@ -2,7 +2,7 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-11-23 — Furusato Nozei return ratio updated to 26.5%
+## 2026-11-23 — Furusato Nozei return ratio and chart household income comparison
 
 ### Updated
 
