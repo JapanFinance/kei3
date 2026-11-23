@@ -7,15 +7,30 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
 import TakeHomeChart, { MAX_CHART_INCOME } from '../components/TakeHomeCalculator/TakeHomeChart';
+import { HOUSEHOLD_INCOME_DISTRIBUTIONS } from '../data/income';
 import { theme } from '../theme';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { DEFAULT_TAXPAYER_AGE_RANGE } from '../types/taxpayerAge';
+import { estimateIncomePercentile } from '../utils/incomeDistribution';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 vi.mock('react-chartjs-2', () => ({
-  Chart: ({ data }: { data?: { datasets?: { label?: string; borderColor?: string }[] } }) => {
+  Chart: ({
+    data,
+    options,
+  }: {
+    data?: { datasets?: { label?: string; borderColor?: string }[] };
+    options?: { plugins?: { customPlugin?: { data?: { currentIncome?: number } } } };
+  }) => {
     const health = data?.datasets?.find(d => d.label === 'Health Insurance');
-    return <div data-testid="chart-canvas" data-border-color={health?.borderColor} />;
+    return (
+      <div
+        data-testid="chart-canvas"
+        data-border-color={health?.borderColor}
+        data-current-income={options?.plugins?.customPlugin?.data?.currentIncome}
+      />
+    );
   },
 }));
 
@@ -116,5 +131,173 @@ describe('TakeHomeChart', () => {
     await user.click(screen.getByRole('button', { name: 'Switch to dark' }));
 
     expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-border-color', '#fff');
+  });
+
+  it('renders static Input Income without a basis selector when no same-household members exist', () => {
+    const nonCohabitingDependent = makeDependent({
+      isSameHousehold: false,
+      isClaimedAsDependent: true,
+      income: {
+        grossEmploymentIncome: 1_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+
+    render(<TakeHomeChart {...baseProps} dependents={[nonCohabitingDependent]} />);
+
+    expect(screen.getByText('Input Income: ¥5,000,000')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: 'Income comparison basis' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '5000000');
+  });
+
+  it('defaults to Household Income when same-household members have income and updates marker and percentile', () => {
+    const allRanges = HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges;
+    const expectedPercentile = estimateIncomePercentile(9_000_000, allRanges).percentile.toFixed(1);
+    const spouse = makeSpouse({
+      isSameHousehold: true,
+      isClaimedAsDependent: false,
+      income: {
+        grossEmploymentIncome: 4_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+
+    render(<TakeHomeChart {...baseProps} dependents={[spouse]} />);
+
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Household Income',
+    );
+    expect(screen.getByText(/: ¥9,000,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '9000000');
+    expect(
+      screen.getByText(new RegExp(`This income is higher than ~${expectedPercentile}% of`)),
+    ).toBeInTheDocument();
+  });
+
+  it('switches between Household Income and Individual Income and updates amount, marker, and percentile', async () => {
+    const user = userEvent.setup();
+    const allRanges = HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges;
+    const indivPercentile = estimateIncomePercentile(5_000_000, allRanges).percentile.toFixed(1);
+    const householdPercentile = estimateIncomePercentile(9_000_000, allRanges).percentile.toFixed(
+      1,
+    );
+    const spouse = makeSpouse({
+      isSameHousehold: true,
+      isClaimedAsDependent: false,
+      income: {
+        grossEmploymentIncome: 4_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+
+    render(<TakeHomeChart {...baseProps} dependents={[spouse]} />);
+
+    expect(
+      screen.getByText(new RegExp(`This income is higher than ~${householdPercentile}% of`)),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox', { name: 'Income comparison basis' }));
+    await user.click(screen.getByRole('option', { name: 'Individual Income' }));
+
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Individual Income',
+    );
+    expect(screen.getByText(/: ¥5,000,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '5000000');
+    expect(
+      screen.getByText(new RegExp(`This income is higher than ~${indivPercentile}% of`)),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox', { name: 'Income comparison basis' }));
+    await user.click(screen.getByRole('option', { name: 'Household Income' }));
+
+    expect(screen.getByText(/: ¥9,000,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '9000000');
+    expect(
+      screen.getByText(new RegExp(`This income is higher than ~${householdPercentile}% of`)),
+    ).toBeInTheDocument();
+  });
+
+  it('defaults to Individual Income while keeping the selector when same-household members have zero income', () => {
+    const child = makeDependent({ isSameHousehold: true });
+
+    render(<TakeHomeChart {...baseProps} dependents={[child]} />);
+
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Individual Income',
+    );
+    expect(screen.getByText(/: ¥5,000,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '5000000');
+  });
+
+  it('handles zero taxpayer income with earning spouse and switching back to Individual Income', async () => {
+    const user = userEvent.setup();
+    const allRanges = HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges;
+    const spousePercentile = estimateIncomePercentile(4_000_000, allRanges).percentile.toFixed(1);
+    const spouse = makeSpouse({
+      isSameHousehold: true,
+      isClaimedAsDependent: false,
+      income: {
+        grossEmploymentIncome: 4_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+
+    render(
+      <TakeHomeChart {...baseProps} currentIncome={0} incomeStreams={[]} dependents={[spouse]} />,
+    );
+
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Household Income',
+    );
+    expect(screen.getByText(/: ¥4,000,000/)).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`This income is higher than ~${spousePercentile}% of`)),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox', { name: 'Income comparison basis' }));
+    await user.click(screen.getByRole('option', { name: 'Individual Income' }));
+
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Individual Income',
+    );
+    expect(screen.getByText(/^: ¥0$/)).toBeInTheDocument();
+    expect(screen.getByText(/Comparison group:/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '0');
+  });
+
+  it('reports top bracket when household total reaches 20 million yen without disabling the chart', () => {
+    const topPercent = HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges.at(-1)!.percent.toFixed(1);
+    const spouse = makeSpouse({
+      isSameHousehold: true,
+      isClaimedAsDependent: false,
+      income: {
+        grossEmploymentIncome: 10_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+
+    render(
+      <TakeHomeChart
+        {...baseProps}
+        currentIncome={15_000_000}
+        incomeStreams={[{ id: 's', type: 'salary', amount: 15_000_000, frequency: 'annual' }]}
+        dependents={[spouse]}
+      />,
+    );
+
+    expect(screen.queryByText('Chart Disabled')).not.toBeInTheDocument();
+    expect(screen.getByText(/: ¥25,000,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '25000000');
+    expect(
+      screen.getByText(new RegExp(`This income is in the top ~${topPercent}% of`)),
+    ).toBeInTheDocument();
   });
 });

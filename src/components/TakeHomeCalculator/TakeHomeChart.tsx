@@ -57,6 +57,8 @@ import { formatJPY } from '../../utils/formatters';
 import {
   estimateIncomePercentile,
   estimateIncomeAtPercentile,
+  otherHouseholdMembersIncome,
+  type IncomeComparisonBasis,
 } from '../../utils/incomeDistribution';
 import { totalAnnualIncomeFromStreams } from '../../utils/incomeStreams';
 import { useLoadMilestone } from '../../utils/loadMilestones';
@@ -273,6 +275,24 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   );
   const isChartDisabled = totalIncome > MAX_CHART_INCOME;
 
+  // Cohabiting household income on the 国民生活基礎調査 basis: taxpayer's annual income plus
+  // any same-household members' gross employment/pension income and other net income.
+  const hasSameHouseholdMembers = useMemo(
+    () => dependents.some(d => d.isSameHousehold),
+    [dependents],
+  );
+  const otherHouseholdIncome = useMemo(() => otherHouseholdMembersIncome(dependents), [dependents]);
+  const householdIncome = currentIncome + otherHouseholdIncome;
+
+  // Defaults to household comparison once cohabiting members contribute positive income, while
+  // letting the user switch between individual and household at any time.
+  const [selectedComparisonBasis, setSelectedComparisonBasis] =
+    useState<IncomeComparisonBasis | null>(null);
+  const comparisonBasis: IncomeComparisonBasis = hasSameHouseholdMembers
+    ? (selectedComparisonBasis ?? (otherHouseholdIncome > 0 ? 'household' : 'individual'))
+    : 'individual';
+  const comparisonIncome = comparisonBasis === 'household' ? householdIncome : currentIncome;
+
   // Track whether the user has manually adjusted the range
   const [hasManuallyAdjustedRange, setHasManuallyAdjustedRange] = useState(false);
   const [manualChartRange, setManualChartRange] = useState<ChartRange | null>(null);
@@ -427,7 +447,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     }
     const baseOptions = getChartOptions(
       chartRange,
-      currentIncome,
+      comparisonIncome,
       distribution.median,
       useCompactLabelFormat,
       animateChart,
@@ -508,7 +528,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     };
   }, [
     chartRange,
-    currentIncome,
+    comparisonIncome,
     incomeYear,
     useCompactLabelFormat,
     animateChart,
@@ -554,7 +574,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   // Determine if legend items should be visible
   const yourIncomeIsVisibleInChart =
-    currentIncome > 0 && currentIncome >= chartRange.min && currentIncome <= chartRange.max;
+    comparisonIncome > 0 &&
+    comparisonIncome >= chartRange.min &&
+    comparisonIncome <= chartRange.max;
   const medianIncomeIsVisibleInChart =
     distribution.median >= chartRange.min && distribution.median <= chartRange.max;
 
@@ -562,8 +584,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     () =>
       isChartDisabled
         ? { percentile: 100, isTopBracket: true, topBracketPercent: 0 }
-        : estimateIncomePercentile(currentIncome, distribution.ranges),
-    [currentIncome, distribution, isChartDisabled],
+        : estimateIncomePercentile(comparisonIncome, distribution.ranges),
+    [comparisonIncome, distribution, isChartDisabled],
   );
 
   return (
@@ -688,7 +710,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               mb: { xs: 1.2, sm: 2 },
             }}
           >
-            {currentIncome > 0 && (
+            {(comparisonIncome > 0 || hasSameHouseholdMembers) && (
               <Box
                 sx={{
                   display: 'flex',
@@ -709,6 +731,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   }}
                 />
                 <Typography
+                  component="div"
                   variant="body2"
                   sx={{
                     color: 'text.secondary',
@@ -716,7 +739,35 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     fontWeight: 500,
                   }}
                 >
-                  Input Income: {formatJPY(currentIncome)}
+                  {hasSameHouseholdMembers ? (
+                    <>
+                      <Select
+                        id="income-comparison-basis"
+                        name="income-comparison-basis"
+                        variant="standard"
+                        value={comparisonBasis}
+                        onChange={event =>
+                          setSelectedComparisonBasis(event.target.value as IncomeComparisonBasis)
+                        }
+                        inputProps={{ 'aria-label': 'Income comparison basis' }}
+                        sx={{
+                          verticalAlign: 'baseline',
+                          color: 'text.secondary',
+                          fontSize: 'inherit',
+                          fontWeight: 600,
+                          '& .MuiSelect-select': { py: 0 },
+                          '& .MuiSelect-select:focus': { backgroundColor: 'transparent' },
+                          '& .MuiSelect-icon': { color: 'text.secondary' },
+                        }}
+                      >
+                        <MenuItem value="individual">Individual Income</MenuItem>
+                        <MenuItem value="household">Household Income</MenuItem>
+                      </Select>
+                      {`: ${formatJPY(comparisonIncome)}`}
+                    </>
+                  ) : (
+                    `Input Income: ${formatJPY(currentIncome)}`
+                  )}
                 </Typography>
               </Box>
             )}
@@ -763,7 +814,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   color: 'primary.main',
                 }}
               >
-                {currentIncome > 0
+                {comparisonIncome > 0
                   ? percentileEstimate.isTopBracket
                     ? `This income is in the top ~${percentileEstimate.topBracketPercent.toFixed(1)}% of `
                     : `This income is higher than ~${percentileEstimate.percentile.toFixed(1)}% of `
@@ -792,17 +843,26 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     </MenuItem>
                   ))}
                 </Select>
-                {currentIncome > 0 && ' in Japan.'}
+                {comparisonIncome > 0 && ' in Japan.'}
                 <DetailedTooltip
                   title="Household types (世帯類型)"
                   icon={SIMPLE_TOOLTIP_ICON}
                   iconAriaLabel="Learn more about the household types"
                 >
                   <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      The survey reports combined pre-tax household income separately for each
+                      household type (世帯類型) below. Picking one changes the income distribution
+                      used for the median line, quintile bands, and percentile estimate.
+                    </Typography>
                     <Typography variant="body2" sx={{ mb: 1.5 }}>
-                      The survey reports the income distribution separately for each household type
-                      (世帯類型) below. Picking one changes the income distribution compared with
-                      the input income.
+                      When members with <strong>Same registered address</strong> are added under{' '}
+                      <strong>Household</strong>, the red marker and percentile comparison can be
+                      switched between <strong>Individual Income</strong> (the taxpayer alone) and{' '}
+                      <strong>Household Income</strong> (adding cohabiting members&apos; gross
+                      employment income, gross public pension income, and other net income as
+                      entered). The chart&apos;s bars always reflect the individual taxpayer&apos;s
+                      take-home pay.
                     </Typography>
                     <Box component="dl" sx={{ m: 0 }}>
                       {HOUSEHOLD_TYPE_ORDER.map(type => (

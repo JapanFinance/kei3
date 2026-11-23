@@ -612,7 +612,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               Household
               <SimpleTooltip>
                 Add spouse and dependents to calculate applicable tax deductions, household National
-                Health Insurance, and family National Pension contributions.
+                Health Insurance, family National Pension contributions, and household income
+                comparisons.
               </SimpleTooltip>
             </Typography>
             <Badge

@@ -2,6 +2,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { IncomeRange } from '../data/income';
+import type { Dependent, DependentIncome } from '../types/dependents';
+
+export type IncomeComparisonBasis = 'individual' | 'household';
+
+/**
+ * Annual income of a household member on the 国民生活基礎調査 basis — matching
+ * TakeHomeResults.annualIncome: gross employment income, gross public pension income,
+ * and other income after necessary expenses.
+ *
+ * Note: `otherNetIncome` is entered on the tax-return 合計所得金額 basis (net of any
+ * blue-filer special deduction, and excluding withholding-settled investment income not entered
+ * under other income), which is the closest available measure from the household member inputs.
+ */
+export const dependentAnnualIncome = (income: DependentIncome): number =>
+  income.grossEmploymentIncome + income.grossPublicPensionIncome + income.otherNetIncome;
+
+/**
+ * Combined annual income of other members in the same household (`isSameHousehold === true`),
+ * following the 国民生活基礎調査 definition of a household (住居及び生計を共にする者).
+ * Excludes members living apart (such as 単身赴任 or students living away) and includes
+ * cohabiting earners regardless of whether they are claimed as tax dependents
+ * (`isClaimedAsDependent`).
+ */
+export const otherHouseholdMembersIncome = (dependents: readonly Dependent[]): number =>
+  dependents.reduce(
+    (sum, dep) => (dep.isSameHousehold ? sum + dependentAnnualIncome(dep.income) : sum),
+    0,
+  );
 
 export interface IncomePercentileEstimate {
   /** Share of households below `income`, in percent. */
