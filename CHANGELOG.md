@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-11-24: Re-design "What's New" dialog
+
+### Updated
+
+- Re-designed the "What's New" dialog with better usability, including search, filtering, and deep-linking.
+
 ## 2026-11-23: Furusato Nozei return ratio and chart household income comparison
 
 ### Updated
