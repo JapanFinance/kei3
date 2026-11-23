@@ -87,7 +87,7 @@ export const CapitalGainsStreamForm: React.FC<StreamTypeFormProps<'capitalGains'
               foreign account is its own option because a sale there is not made through a broker
               licensed in Japan (金融商品取引業者), which the law requires of a loss for it to
               offset dividends or be carried forward. A loss in a foreign account only offsets the
-              year&apos;s other reported gains.
+              year's other reported gains.
             </Typography>
           </DetailedTooltip>
         </FormHelperText>

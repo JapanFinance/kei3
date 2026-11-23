@@ -22,12 +22,12 @@ export const FOREIGN_DIVIDEND_TAX_NOTE =
 export const WITHHOLDING_ACCOUNT_REPORTING_TOOLTIP = (
   <DetailedTooltip title="Reporting" icon={SIMPLE_TOOLTIP_ICON} iconAriaLabel="reporting info">
     <Typography sx={{ display: 'block', mb: 1 }}>
-      Whether a withholding designated account&apos;s sales and dividends go on a tax return is
-      chosen per such account, separate from every other account.
+      Whether a withholding designated account's sales and dividends go on a tax return is chosen
+      per such account, separate from every other account.
     </Typography>
     <Typography sx={{ display: 'block', mb: 1 }}>
       Reporting includes the figure on the tax return, where it counts toward total net income. A
-      reported loss offsets the year&apos;s other reported gains and, under separate taxation, the
+      reported loss offsets the year's other reported gains and, under separate taxation, the
       reported dividends. All reported dividends follow the one election for separate or aggregate
       taxation, made in the income list.
     </Typography>

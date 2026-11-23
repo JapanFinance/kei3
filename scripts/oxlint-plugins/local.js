@@ -103,10 +103,61 @@ const noObjectLiteralAccessor = {
   },
 };
 
+const SINGLE_QUOTE_ENTITY_RE = /&(?:apos|#0*39|#[xX]0*27);/g;
+const DOUBLE_QUOTE_ENTITY_RE = /&(?:quot|#0*34|#[xX]0*22);/g;
+const QUOTE_ENTITY_RE = /&(?:(apos|#0*39|#[xX]0*27)|(quot|#0*34|#[xX]0*22));/g;
+
+/**
+ * Flags unnecessary HTML entities for ASCII single and double quotes (`&apos;`,
+ * `&quot;`, `&#39;`, `&#34;`, `&#x27;`, `&#x22;`) in JSX text and compatible
+ * JSX string attributes. JSX does not require escaping quotes in text content.
+ */
+const noJsxQuoteEntity = {
+  meta: {
+    type: 'suggestion',
+    fixable: 'code',
+    docs: {
+      description: 'Disallow unnecessary HTML quote entities in JSX text and attributes.',
+    },
+  },
+  create(context) {
+    function checkNode(node, pattern, replacer) {
+      const raw = context.sourceCode.getText(node);
+      pattern.lastIndex = 0;
+      if (!pattern.test(raw)) return;
+      pattern.lastIndex = 0;
+      context.report({
+        node,
+        message:
+          'Use literal quote characters instead of HTML entities like &apos; or &quot; in JSX.',
+        fix(fixer) {
+          return fixer.replaceText(node, raw.replace(pattern, replacer));
+        },
+      });
+    }
+
+    return {
+      JSXText(node) {
+        checkNode(node, QUOTE_ENTITY_RE, (_, single) => (single ? "'" : '"'));
+      },
+      'JSXAttribute > Literal'(node) {
+        if (typeof node.value !== 'string') return;
+        const raw = context.sourceCode.getText(node);
+        if (raw.startsWith('"')) {
+          checkNode(node, SINGLE_QUOTE_ENTITY_RE, "'");
+        } else if (raw.startsWith("'")) {
+          checkNode(node, DOUBLE_QUOTE_ENTITY_RE, '"');
+        }
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: 'local' },
   rules: {
     'license-header': licenseHeader,
+    'no-jsx-quote-entity': noJsxQuoteEntity,
     'no-jsx-unicode-escape': noJsxUnicodeEscape,
     'no-object-literal-accessor': noObjectLiteralAccessor,
   },

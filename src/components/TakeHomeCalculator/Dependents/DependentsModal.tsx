@@ -357,7 +357,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               <DetailedTooltip title="Shared Living Expenses" icon={SIMPLE_TOOLTIP_ICON}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Claiming spousal or dependent deductions (配偶者控除・扶養控除) or deducting a
-                  family member&apos;s National Pension under the social insurance deduction
+                  family member's National Pension under the social insurance deduction
                   (社会保険料控除) strictly requires sharing living expenses (生計を一にする).
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>

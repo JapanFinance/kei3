@@ -301,9 +301,8 @@ export const StockCompensationStreamForm: React.FC<StreamTypeFormProps<'stockCom
             <AccordionDetails>
               <Typography variant="body2">
                 Use the TTM (Telegraphic Transfer Middle) exchange rate on the day of the taxable
-                event for converting foreign currency denominated share value to JPY. If that
-                date&apos;s exchange rate is not available, use the closest available prior
-                date&apos;s TTM rate.
+                event for converting foreign currency denominated share value to JPY. If that date's
+                exchange rate is not available, use the closest available prior date's TTM rate.
               </Typography>
               <Typography
                 variant="caption"

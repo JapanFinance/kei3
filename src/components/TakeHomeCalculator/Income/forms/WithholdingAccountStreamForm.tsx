@@ -234,7 +234,7 @@ export const WithholdingAccountStreamForm: React.FC<StreamTypeFormProps<'withhol
             <FormHelperText sx={minimumTaxWarningSx}>{MINIMUM_TAX_REPORTING_NOTE}</FormHelperText>
           ) : dividendsForced ? (
             <FormHelperText>
-              Reporting this account&apos;s loss requires reporting its dividends as well.
+              Reporting this account's loss requires reporting its dividends as well.
             </FormHelperText>
           ) : null}
         </FormControl>
