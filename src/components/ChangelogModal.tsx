@@ -78,10 +78,10 @@ function CategoryBadge({ category }: { category: ChangelogCategory }) {
         const tone = paletteKey
           ? {
               bgcolor: alpha(theme.palette[paletteKey].main, 0.12),
-              color: theme.palette[paletteKey].dark,
+              color: `${paletteKey}.dark`,
               ...theme.applyStyles('dark', {
                 bgcolor: alpha(theme.palette[paletteKey].main, 0.22),
-                color: theme.palette[paletteKey].light,
+                color: `${paletteKey}.light`,
               }),
             }
           : {
@@ -322,12 +322,10 @@ function ReleaseCard({
           borderBottom: '1px solid',
           borderColor: 'divider',
           bgcolor:
-            targeted || highlighted
-              ? alpha(theme.palette.primary.main, 0.05)
-              : alpha(theme.palette.action.hover, 0.5),
+            targeted || highlighted ? alpha(theme.palette.primary.main, 0.05) : 'action.hover',
           ...theme.applyStyles('dark', {
             bgcolor:
-              targeted || highlighted ? alpha(theme.palette.primary.main, 0.12) : 'action.hover',
+              targeted || highlighted ? alpha(theme.palette.primary.main, 0.14) : 'action.hover',
           }),
         })}
       >
@@ -494,16 +492,13 @@ function EarlierAccordionItem({
       </Box>
 
       <Box
-        sx={(theme: Theme) => ({
+        sx={{
           px: 2,
           py: 1.75,
           borderTop: '1px solid',
           borderColor: 'divider',
-          bgcolor: alpha(theme.palette.action.hover, 0.35),
-          ...theme.applyStyles('dark', {
-            bgcolor: 'action.hover',
-          }),
-        })}
+          bgcolor: 'action.hover',
+        }}
       >
         <Box
           sx={{
@@ -784,14 +779,11 @@ export default function ChangelogModal({
 
       {changelog && !error && entries.length > 0 && (
         <Box
-          sx={(theme: Theme) => ({
+          sx={{
             borderTop: '1px solid',
             borderBottom: '1px solid',
             borderColor: 'divider',
-            bgcolor: alpha(theme.palette.action.hover, 0.45),
-            ...theme.applyStyles('dark', {
-              bgcolor: 'action.hover',
-            }),
+            bgcolor: 'action.hover',
             px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
             pr: isMobile ? 'max(16px, env(safe-area-inset-right))' : 3,
             py: 1.25,
@@ -799,7 +791,7 @@ export default function ChangelogModal({
             flexDirection: { xs: 'column', sm: 'row' },
             alignItems: { xs: 'stretch', sm: 'center' },
             gap: 1.25,
-          })}
+          }}
         >
           <TextField
             value={searchQuery}
@@ -858,6 +850,7 @@ export default function ChangelogModal({
               variant={selectedCategory === 'all' ? 'filled' : 'outlined'}
               aria-pressed={selectedCategory === 'all'}
               onClick={() => setSelectedCategory('all')}
+              sx={selectedCategory === 'all' ? undefined : { bgcolor: 'background.paper' }}
             />
             {availableCategories.map(category => {
               const selected = selectedCategory === category;
@@ -872,6 +865,7 @@ export default function ChangelogModal({
                   variant={selected ? 'filled' : 'outlined'}
                   aria-pressed={selected}
                   onClick={() => setSelectedCategory(category)}
+                  sx={selected ? undefined : { bgcolor: 'background.paper' }}
                 />
               );
             })}
