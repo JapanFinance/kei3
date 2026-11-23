@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getLastViewedDate, setLastViewedDate } from '../utils/changelogStorage';
 
 export const CHANGELOG_HASH = '#changelog';
-const CHANGELOG_ENTRY_HASH_RE = /^#changelog-(\d{4}-\d{2}-\d{2})$/;
+const CHANGELOG_ENTRY_HASH_REGEX = /^#changelog-(\d{4}-\d{2}-\d{2})$/;
 
 export function changelogEntryHash(date: string): string {
   return `#changelog-${date}`;
@@ -16,7 +16,7 @@ export function parseChangelogHash(hash: string): { isOpen: boolean; targetDate:
   if (hash === CHANGELOG_HASH) {
     return { isOpen: true, targetDate: null };
   }
-  const match = hash.match(CHANGELOG_ENTRY_HASH_RE);
+  const match = hash.match(CHANGELOG_ENTRY_HASH_REGEX);
   if (match?.[1]) {
     return { isOpen: true, targetDate: match[1] };
   }
