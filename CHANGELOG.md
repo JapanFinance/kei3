@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-11-23
+
+### Updated
+
+- Updated the Furusato Nozei estimated value of goods received from 25.2% to 26.5% of the donation amount based on the [FY2025 Furusato Nozei status survey (PDF)](https://www.soumu.go.jp/main_content/001085011.pdf) published by the Ministry of Internal Affairs and Communications (MIC).
+
 ## 2026-11-22
 
 ### Updated

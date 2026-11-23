@@ -20,8 +20,12 @@ interface FurusatoNozeiTabProps {
   results: TakeHomeResults;
 }
 
-/** Source: 調査結果（概要） https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac02 */
-const FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE = 0.252;
+/**
+ * Source: 令和8年度調査結果（概要） (FY2025 actuals, published July 31, 2026 — 返礼品の調達に係る費用 26.5%)
+ * Archive: https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03
+ * PDF: https://www.soumu.go.jp/main_content/001085011.pdf
+ */
+const FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE = 0.265;
 
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
@@ -384,7 +388,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           * Estimated at {FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE * 100}% of donation amount,
           based on the{' '}
           <a
-            href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac02"
+            href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03"
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'inherit', textDecoration: 'underline' }}

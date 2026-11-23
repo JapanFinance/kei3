@@ -228,3 +228,26 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     expect(screen.getByText('No Furusato Nozei Data Available')).toBeInTheDocument();
   });
 });
+
+describe('FurusatoNozeiTab Effective Return Analysis', () => {
+  it('estimates value of goods received at 26.5% of limit and links to MIC survey', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 60_000,
+        incomeTaxReduction: 5_800,
+        residenceTaxReduction: 52_200,
+        outOfPocketCost: 2_000,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(screen.getByText('≈ ¥15,900')).toBeInTheDocument();
+    expect(screen.getByText('≈ ¥13,900')).toBeInTheDocument();
+    expect(screen.getByText(/Estimated at 26\.5% of donation amount/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'average Furusato Nozei gift cost' })).toHaveAttribute(
+      'href',
+      'https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03',
+    );
+  });
+});
