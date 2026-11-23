@@ -62,6 +62,8 @@ export function useChangelogModal(): UseChangelogModalReturn {
   const [hasNewFeatures, setHasNewFeatures] = useState(
     () => __LATEST_CHANGELOG_DATE__ !== '' && getLastViewedDate() !== __LATEST_CHANGELOG_DATE__,
   );
+  // Mirrors `isOpen` for the `[]`-dep hash listener and `openModal` callback so they read live
+  // open state without stale closures or re-subscribing on every open/close.
   const isOpenRef = useRef(false);
 
   const markViewed = useCallback(() => {
@@ -76,6 +78,9 @@ export function useChangelogModal(): UseChangelogModalReturn {
     const checkHash = () => {
       const parsed = parseChangelogHash(window.location.hash);
       if (parsed.isOpen) {
+        // Snapshot the prior viewed date only on a closed -> open transition; once open,
+        // `markViewed()` overwrites localStorage, so changing hashes mid-session must not clear
+        // the "New since last visit" highlight.
         if (!isOpenRef.current) {
           setPreviousLastViewedDate(getLastViewedDate());
         }
@@ -83,6 +88,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
         setIsOpen(true);
         setTargetDate(parsed.targetDate);
       } else if (isOpenRef.current) {
+        // Only reset when leaving a changelog hash while the modal is actually open.
         isOpenRef.current = false;
         setIsOpen(false);
         setTargetDate(null);

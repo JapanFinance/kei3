@@ -692,7 +692,7 @@ export default function ChangelogModal({
     setFilterState({ scopeKey, query: '', category: 'all' });
   };
 
-  const subtitleText = changelog?.latestDate
+  const footerSummary = changelog?.latestDate
     ? `${entries.length} update${entries.length === 1 ? '' : 's'} · Last updated ${formatChangelogDateShort(changelog.latestDate)}`
     : null;
 
@@ -754,16 +754,9 @@ export default function ChangelogModal({
           >
             <AnnouncementIcon fontSize="small" />
           </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h6" component="h2" sx={{ fontWeight: 600, lineHeight: 1.25 }}>
-              What's New
-            </Typography>
-            {subtitleText && (
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                {subtitleText}
-              </Typography>
-            )}
-          </Box>
+          <Typography variant="h6" component="h2" sx={{ fontWeight: 600, lineHeight: 1.25 }}>
+            What's New
+          </Typography>
         </Box>
 
         <IconButton
@@ -1066,18 +1059,15 @@ export default function ChangelogModal({
           pr: isMobile ? 'max(16px, env(safe-area-inset-right))' : 3,
           py: 1.5,
           pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 1.5,
-          justifyContent: 'space-between',
           gap: 2,
         }}
       >
-        {!isMobile && (
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {previousLastViewedDate
-              ? `Last viewed ${formatChangelogDateShort(previousLastViewedDate)}`
-              : ''}
+        {footerSummary && (
+          <Typography variant="caption" sx={{ color: 'text.secondary', mr: 'auto' }}>
+            {footerSummary}
           </Typography>
         )}
-        <Button onClick={onClose} variant="contained" fullWidth={isMobile}>
+        <Button onClick={onClose} variant="contained" sx={{ flexShrink: 0 }}>
           Close
         </Button>
       </DialogActions>

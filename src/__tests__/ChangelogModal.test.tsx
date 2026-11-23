@@ -150,7 +150,7 @@ describe('ChangelogModal', () => {
     expect(pdfLink).toHaveTextContent('(PDF)');
   });
 
-  it('renders full-screen layout on mobile viewports without desktop footer caption', () => {
+  it('renders full-screen layout on mobile viewports with consistent footer summary', () => {
     vi.mocked(useMediaQuery).mockReturnValue(true);
 
     render(
@@ -162,7 +162,8 @@ describe('ChangelogModal', () => {
       />,
     );
 
-    expect(screen.queryByText(/Last viewed Nov 5, 2026/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Last viewed/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/updates · Last updated/i)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2);
   });
 });
