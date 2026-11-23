@@ -87,7 +87,7 @@ Before declaring a task complete, you MUST:
 `IncomeStream` in [`src/types/tax.ts`](src/types/tax.ts) is a discriminated union. Add the new stream interface to `IncomeStream` first; TypeScript's exhaustive checks and the step-by-step checklist in the JSDoc on `IncomeStream` will guide all required updates across [`src/utils/incomeStreams.ts`](src/utils/incomeStreams.ts), `incomeStreamCatalog.ts`, form components, `IncomeDetailsModal.tsx`, `taxCalculations.ts`, and `chartConfig.ts`.
 
 ### Updating `CHANGELOG.md`
-If a change is user-facing and noteworthy, add an entry at the top of [`CHANGELOG.md`](CHANGELOG.md) under an ISO date heading (`## YYYY-MM-DD`) and a category heading (`### New`, `### Updated`, `### Fixed`, `### Deprecated`, `### Removed`, or `### Security`) with `- ` bullet items. [`src/utils/changelogUtils.ts`](src/utils/changelogUtils.ts) parses this exact structure for the in-app "What's New" dialog.
+If a change is user-facing and noteworthy, add an entry at the top of [`CHANGELOG.md`](CHANGELOG.md) under an ISO date heading with an optional release title (`## YYYY-MM-DD — Short title`, or plain `## YYYY-MM-DD`) and a category heading (`### New`, `### Updated`, `### Fixed`, `### Deprecated`, `### Removed`, or `### Security`) with `- ` bullet items. [`src/utils/changelogUtils.ts`](src/utils/changelogUtils.ts) parses this exact structure for the in-app "What's New" dialog.
 
 ## Critical Rule: Official Sources Only
 

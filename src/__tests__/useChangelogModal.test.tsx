@@ -4,12 +4,30 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { useChangelogModal } from '../hooks/useChangelogModal';
+import {
+  changelogEntryHash,
+  isChangelogHash,
+  parseChangelogHash,
+  useChangelogModal,
+} from '../hooks/useChangelogModal';
 import { CHANGELOG_STORAGE_KEYS } from '../utils/changelogStorage';
 
 // The same value the build inlines into the hook, so these tests exercise the
 // real comparison rather than a stand-in date.
 const LATEST = __LATEST_CHANGELOG_DATE__;
+
+describe('changelog hash helpers', () => {
+  it('parses generic #changelog and entry-specific #changelog-YYYY-MM-DD hashes', () => {
+    expect(parseChangelogHash('#changelog')).toEqual({ isOpen: true, targetDate: null });
+    expect(parseChangelogHash(changelogEntryHash('2026-10-24'))).toEqual({
+      isOpen: true,
+      targetDate: '2026-10-24',
+    });
+    expect(parseChangelogHash('#other')).toEqual({ isOpen: false, targetDate: null });
+    expect(isChangelogHash('#changelog-2026-10-24')).toBe(true);
+    expect(isChangelogHash('#changelog-invalid')).toBe(false);
+  });
+});
 
 describe('useChangelogModal', () => {
   beforeEach(() => {
@@ -82,5 +100,59 @@ describe('useChangelogModal', () => {
     // A fresh mount reads the stored date, which opening alone never wrote.
     const second = renderHook(() => useChangelogModal());
     expect(second.result.current.hasNewFeatures).toBe(true);
+  });
+
+  it('preserves previousLastViewedDate across markViewed during the open session and refreshes on reopen', () => {
+    localStorage.setItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE, '2026-11-05');
+    const { result } = renderHook(() => useChangelogModal());
+
+    act(() => {
+      result.current.openModal();
+    });
+    act(() => {
+      result.current.markViewed();
+    });
+
+    expect(result.current.previousLastViewedDate).toBe('2026-11-05');
+
+    act(() => {
+      result.current.closeModal();
+    });
+    act(() => {
+      result.current.openModal();
+    });
+
+    expect(result.current.previousLastViewedDate).toBe(LATEST);
+  });
+
+  it('opens to targetDate from #changelog-YYYY-MM-DD and clears hash on close', () => {
+    window.history.replaceState(null, '', '#changelog-2026-10-24');
+
+    const { result } = renderHook(() => useChangelogModal());
+
+    expect(result.current.isOpen).toBe(true);
+    expect(result.current.targetDate).toBe('2026-10-24');
+
+    act(() => {
+      result.current.closeModal();
+    });
+
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.targetDate).toBeNull();
+    expect(window.location.hash).toBe('');
+  });
+
+  it('closes when navigating back away from a changelog hash', () => {
+    window.history.replaceState(null, '', '#changelog-2026-10-24');
+    const { result } = renderHook(() => useChangelogModal());
+    expect(result.current.isOpen).toBe(true);
+
+    act(() => {
+      window.history.replaceState(null, '', window.location.pathname);
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.targetDate).toBeNull();
   });
 });

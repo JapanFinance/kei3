@@ -3,7 +3,8 @@
 
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
-import { keyframes } from '@mui/material/styles';
+import { keyframes, useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useState, useEffect } from 'react';
 
 const spin = keyframes`
@@ -30,6 +31,8 @@ const SPINNER_DELAY_MS = 150;
  * and this is on screen only until the module arrives.
  */
 export default function ChangelogLoadingDialog({ onClose }: { onClose: () => void }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [waitedLongEnough, setWaitedLongEnough] = useState(false);
 
   useEffect(() => {
@@ -40,10 +43,24 @@ export default function ChangelogLoadingDialog({ onClose }: { onClose: () => voi
   if (!waitedLongEnough) return null;
 
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth aria-label="Loading changelog">
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth={false}
+      fullWidth
+      fullScreen={isMobile}
+      aria-label="Loading changelog"
+      slotProps={{
+        paper: {
+          sx: {
+            maxWidth: isMobile ? '100%' : 720,
+          },
+        },
+      }}
+    >
       <Box
         sx={{
-          minHeight: { xs: '70vh', sm: '60vh' },
+          minHeight: isMobile ? '100dvh' : '60vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

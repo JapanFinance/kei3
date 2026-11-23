@@ -8,7 +8,7 @@ import ChangelogButton from './components/ChangelogButton';
 import ChangelogLoadingDialog from './components/ChangelogLoadingDialog';
 import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
-import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
+import { useChangelogModal, isChangelogHash } from './hooks/useChangelogModal';
 import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
 import type { TakeHomeFormState } from './types/tax';
@@ -57,7 +57,7 @@ const changelogRequest = new Promise<void>(resolve => {
 // competing with visible content at startup. Deep links to #changelog need the
 // modal immediately and skip the deferral.
 const ChangelogModal = lazy(() =>
-  window.location.hash === CHANGELOG_HASH
+  isChangelogHash(window.location.hash)
     ? import('./components/ChangelogModal')
     : Promise.race([
         chartModulePromise.catch(() => undefined).then(whenBrowserIdle),
@@ -71,6 +71,8 @@ function App() {
   // Changelog modal management
   const {
     isOpen: isChangelogOpen,
+    targetDate: changelogTargetDate,
+    previousLastViewedDate,
     openModal: openChangelog,
     closeModal: closeChangelog,
     markViewed: markChangelogViewed,
@@ -261,6 +263,8 @@ function App() {
             open={isChangelogOpen}
             onClose={closeChangelog}
             onViewed={markChangelogViewed}
+            previousLastViewedDate={previousLastViewedDate}
+            targetDate={changelogTargetDate}
           />
         </Suspense>
       </Box>
