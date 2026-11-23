@@ -128,7 +128,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       {...(size && { size })}
       slotProps={{
         htmlInput: {
-          inputMode: 'numeric',
+          inputMode: decimalScale > 0 ? 'decimal' : 'numeric',
           ...inputProps,
         },
         input: {
