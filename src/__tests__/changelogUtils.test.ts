@@ -17,25 +17,19 @@ import {
 } from '../utils/changelogUtils';
 
 describe('parseChangelog', () => {
-  it('parses optional release titles with em dash, en dash, or hyphen', () => {
+  it('parses optional colon-separated release titles and plain date headers', () => {
     const md = `
-## 2026-11-23 — Furusato Nozei return ratio updated to 26.5%
+## 2026-11-23: Furusato Nozei return ratio updated to 26.5%
 
 ### Updated
 
 - Updated ratio.
 
-## 2026-11-22 – Family National Pension contributions
+## 2026-11-22: Family National Pension contributions
 
 ### New
 
 - Added family contributions.
-
-## 2026-11-05 - Household modal
-
-### Fixed
-
-- Fixed calculation.
 
 ## 2026-10-25
 
@@ -47,17 +41,16 @@ describe('parseChangelog', () => {
     const parsed = parseChangelog(md);
 
     expect(parsed.latestDate).toBe('2026-11-23');
-    expect(parsed.entries).toHaveLength(4);
+    expect(parsed.entries).toHaveLength(3);
     expect(parsed.entries[0]?.title).toBe('Furusato Nozei return ratio updated to 26.5%');
     expect(parsed.entries[1]?.title).toBe('Family National Pension contributions');
-    expect(parsed.entries[2]?.title).toBe('Household modal');
-    expect(parsed.entries[3]?.title).toBeUndefined();
-    expect('title' in (parsed.entries[3] ?? {})).toBe(false);
+    expect(parsed.entries[2]?.title).toBeUndefined();
+    expect('title' in (parsed.entries[2] ?? {})).toBe(false);
   });
 
   it('merges duplicate category headings under the same date without overwriting', () => {
     const md = `
-## 2026-10-24 — Sample
+## 2026-10-24: Sample
 
 ### New
 

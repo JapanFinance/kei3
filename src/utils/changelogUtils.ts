@@ -18,7 +18,7 @@ export type ChangelogCategory = (typeof CHANGELOG_CATEGORIES)[number];
 
 export interface ChangelogEntry {
   date: string; // ISO format (yyyy-mm-dd) for parsing, display format handled in UI
-  title?: string; // Optional concise headline from `## YYYY-MM-DD — Title`
+  title?: string; // Optional concise headline from `## YYYY-MM-DD: Title`
   sections: Partial<Record<ChangelogCategory, string[]>>;
 }
 
@@ -38,7 +38,7 @@ const PDF_HREF = /\.pdf($|[?#])/i;
 
 /**
  * Simple markdown changelog parser.
- * Parses a changelog with ISO date headers (`## yyyy-mm-dd` or `## yyyy-mm-dd — Title`).
+ * Parses a changelog with ISO date headers (`## yyyy-mm-dd` or `## yyyy-mm-dd: Title`).
  */
 export function parseChangelog(markdownContent: string): ParsedChangelog {
   const lines = markdownContent.split('\n').map(line => line.trim());
@@ -47,8 +47,8 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
   let currentSection: ChangelogCategory | null = null;
 
   for (const line of lines) {
-    // Check for date header (`## 2025-01-15` or `## 2025-01-15 — Release title`)
-    const dateMatch = line.match(/^## (\d{4}-\d{2}-\d{2})(?:\s+[—–-]\s+(.+))?$/);
+    // Check for date header (`## 2025-01-15` or `## 2025-01-15: Release title`)
+    const dateMatch = line.match(/^## (\d{4}-\d{2}-\d{2})(?::\s+(.+))?$/);
     if (dateMatch) {
       if (currentEntry) {
         entries.push(currentEntry);
