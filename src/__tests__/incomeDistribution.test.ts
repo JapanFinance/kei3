@@ -10,7 +10,13 @@ import {
   DEFAULT_HOUSEHOLD_TYPE,
   type HouseholdType,
 } from '../data/income';
-import { estimateIncomePercentile, estimateIncomeAtPercentile } from '../utils/incomeDistribution';
+import {
+  estimateIncomePercentile,
+  estimateIncomeAtPercentile,
+  dependentAnnualIncome,
+  otherHouseholdMembersIncome,
+} from '../utils/incomeDistribution';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 const ALL_TYPES = Object.values(HOUSEHOLD_INCOME_DISTRIBUTIONS);
 
@@ -224,4 +230,99 @@ describe('estimateIncomeAtPercentile', () => {
       expect(estimateIncomeAtPercentile(101, typeRanges)).toBe(20_000_000);
     },
   );
+});
+
+describe('dependentAnnualIncome', () => {
+  it('sums gross employment income, gross public pension income, and other net income', () => {
+    const income = {
+      grossEmploymentIncome: 3_500_000,
+      grossPublicPensionIncome: 1_200_000,
+      otherNetIncome: 450_000,
+    };
+
+    const result = dependentAnnualIncome(income);
+
+    expect(result).toBe(5_150_000);
+  });
+});
+
+describe('otherHouseholdMembersIncome', () => {
+  it('returns zero when there are no dependents', () => {
+    expect(otherHouseholdMembersIncome([])).toBe(0);
+  });
+
+  it('includes cohabiting members even when not claimed as tax dependents', () => {
+    const spouse = makeSpouse({
+      isSameHousehold: true,
+      isClaimedAsDependent: false,
+      income: {
+        grossEmploymentIncome: 4_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 200_000,
+      },
+    });
+
+    const result = otherHouseholdMembersIncome([spouse]);
+
+    expect(result).toBe(4_200_000);
+  });
+
+  it('excludes non-cohabiting members even when claimed as tax dependents', () => {
+    const nonCohabitingParent = makeDependent({
+      relationship: 'parent',
+      ageRange: '70to74',
+      isSameHousehold: false,
+      isClaimedAsDependent: true,
+      income: {
+        grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 1_500_000,
+        otherNetIncome: 0,
+      },
+    });
+
+    const result = otherHouseholdMembersIncome([nonCohabitingParent]);
+
+    expect(result).toBe(0);
+  });
+
+  it('sums income across multiple cohabiting household members and skips non-cohabiting ones', () => {
+    const spouse = makeSpouse({
+      id: 'spouse',
+      isSameHousehold: true,
+      isClaimedAsDependent: false,
+      income: {
+        grossEmploymentIncome: 4_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+    const cohabitingParent = makeDependent({
+      id: 'parent',
+      relationship: 'parent',
+      ageRange: '70to74',
+      isSameHousehold: true,
+      isClaimedAsDependent: true,
+      income: {
+        grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 1_200_000,
+        otherNetIncome: 100_000,
+      },
+    });
+    const awayChild = makeDependent({
+      id: 'child-away',
+      relationship: 'child',
+      ageRange: '20to22',
+      isSameHousehold: false,
+      isClaimedAsDependent: true,
+      income: {
+        grossEmploymentIncome: 900_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+
+    const result = otherHouseholdMembersIncome([spouse, cohabitingParent, awayChild]);
+
+    expect(result).toBe(5_300_000);
+  });
 });
