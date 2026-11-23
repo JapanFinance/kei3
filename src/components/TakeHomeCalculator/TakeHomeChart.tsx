@@ -842,15 +842,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                       household type (世帯類型) below. Picking one changes the income distribution
                       used for the median line, quintile bands, and percentile estimate.
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1.5 }}>
-                      The red marker and percentile comparison can be switched between{' '}
-                      <strong>Individual Income</strong> (the taxpayer alone) and{' '}
-                      <strong>Household Income</strong> (adding cohabiting members with{' '}
-                      <strong>Same registered address</strong> configured under{' '}
-                      <strong>Household</strong>: their gross employment income, gross public
-                      pension income, and other net income as entered). The chart&apos;s bars always
-                      reflect the individual taxpayer&apos;s take-home pay.
-                    </Typography>
                     <Box component="dl" sx={{ m: 0 }}>
                       {HOUSEHOLD_TYPE_ORDER.map(type => (
                         <Box key={type} sx={{ mb: 1 }}>
