@@ -125,6 +125,9 @@
         marker is a redundant safeguard for intermediaries that keep serving
         the old HTML.
       - When offline, the fetch rejects and the cached app keeps working.
+      - priority: 'low' (Fetch Priority API) keeps the background probe from
+        competing with Wave 1 module downloads on a restored tab and is safely
+        ignored by browsers that do not support RequestInit.priority.
     -->
     <script>
       (() => {
@@ -138,7 +141,7 @@
           ).join('\n');
         const bootedModules = moduleSrcs(document);
         if (!bootedModules) return;
-        fetch(`/?stale-probe=${Date.now()}`, { cache: 'no-store' })
+        fetch(`/?stale-probe=${Date.now()}`, { cache: 'no-store', priority: 'low' })
           .then(async response => {
             if (!response.ok) return;
             const latest = moduleSrcs(
