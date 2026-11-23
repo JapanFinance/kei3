@@ -277,10 +277,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   // Cohabiting household income on the 国民生活基礎調査 basis: taxpayer's annual income plus
   // any same-household members' gross employment/pension income and other net income.
-  const hasSameHouseholdMembers = useMemo(
-    () => dependents.some(d => d.isSameHousehold),
-    [dependents],
-  );
   const otherHouseholdIncome = useMemo(() => otherHouseholdMembersIncome(dependents), [dependents]);
   const householdIncome = currentIncome + otherHouseholdIncome;
 
@@ -288,9 +284,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   // letting the user switch between individual and household at any time.
   const [selectedComparisonBasis, setSelectedComparisonBasis] =
     useState<IncomeComparisonBasis | null>(null);
-  const comparisonBasis: IncomeComparisonBasis = hasSameHouseholdMembers
-    ? (selectedComparisonBasis ?? (otherHouseholdIncome > 0 ? 'household' : 'individual'))
-    : 'individual';
+  const comparisonBasis: IncomeComparisonBasis =
+    selectedComparisonBasis ?? (otherHouseholdIncome > 0 ? 'household' : 'individual');
   const comparisonIncome = comparisonBasis === 'household' ? householdIncome : currentIncome;
 
   // Track whether the user has manually adjusted the range
@@ -710,67 +705,59 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               mb: { xs: 1.2, sm: 2 },
             }}
           >
-            {(comparisonIncome > 0 || hasSameHouseholdMembers) && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                opacity: yourIncomeIsVisibleInChart ? 1 : 0.5,
+                transition: 'opacity 0.3s ease-in-out',
+                gap: 1,
+              }}
+            >
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  opacity: yourIncomeIsVisibleInChart ? 1 : 0.5,
-                  transition: 'opacity 0.3s ease-in-out',
-                  gap: 1,
+                  width: 2, // vertical line: narrow width
+                  height: 24, // vertical line: tall height
+                  borderRadius: 1,
+                  backgroundColor: YOUR_INCOME_COLOR,
+                  display: 'inline-block',
+                  mr: 1,
+                }}
+              />
+              <Typography
+                component="div"
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.97rem', sm: '1rem' },
+                  fontWeight: 500,
                 }}
               >
-                <Box
+                <Select
+                  id="income-comparison-basis"
+                  name="income-comparison-basis"
+                  variant="standard"
+                  value={comparisonBasis}
+                  onChange={event =>
+                    setSelectedComparisonBasis(event.target.value as IncomeComparisonBasis)
+                  }
+                  inputProps={{ 'aria-label': 'Income comparison basis' }}
                   sx={{
-                    width: 2, // vertical line: narrow width
-                    height: 24, // vertical line: tall height
-                    borderRadius: 1,
-                    backgroundColor: YOUR_INCOME_COLOR,
-                    display: 'inline-block',
-                    mr: 1,
-                  }}
-                />
-                <Typography
-                  component="div"
-                  variant="body2"
-                  sx={{
+                    verticalAlign: 'baseline',
                     color: 'text.secondary',
-                    fontSize: { xs: '0.97rem', sm: '1rem' },
-                    fontWeight: 500,
+                    fontSize: 'inherit',
+                    fontWeight: 600,
+                    '& .MuiSelect-select': { py: 0 },
+                    '& .MuiSelect-select:focus': { backgroundColor: 'transparent' },
+                    '& .MuiSelect-icon': { color: 'text.secondary' },
                   }}
                 >
-                  {hasSameHouseholdMembers ? (
-                    <>
-                      <Select
-                        id="income-comparison-basis"
-                        name="income-comparison-basis"
-                        variant="standard"
-                        value={comparisonBasis}
-                        onChange={event =>
-                          setSelectedComparisonBasis(event.target.value as IncomeComparisonBasis)
-                        }
-                        inputProps={{ 'aria-label': 'Income comparison basis' }}
-                        sx={{
-                          verticalAlign: 'baseline',
-                          color: 'text.secondary',
-                          fontSize: 'inherit',
-                          fontWeight: 600,
-                          '& .MuiSelect-select': { py: 0 },
-                          '& .MuiSelect-select:focus': { backgroundColor: 'transparent' },
-                          '& .MuiSelect-icon': { color: 'text.secondary' },
-                        }}
-                      >
-                        <MenuItem value="individual">Individual Income</MenuItem>
-                        <MenuItem value="household">Household Income</MenuItem>
-                      </Select>
-                      {`: ${formatJPY(comparisonIncome)}`}
-                    </>
-                  ) : (
-                    `Input Income: ${formatJPY(currentIncome)}`
-                  )}
-                </Typography>
-              </Box>
-            )}
+                  <MenuItem value="individual">Individual Income</MenuItem>
+                  <MenuItem value="household">Household Income</MenuItem>
+                </Select>
+                {`: ${formatJPY(comparisonIncome)}`}
+              </Typography>
+            </Box>
             <Box
               sx={{
                 display: 'flex',
@@ -856,13 +843,13 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                       used for the median line, quintile bands, and percentile estimate.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1.5 }}>
-                      When members with <strong>Same registered address</strong> are added under{' '}
-                      <strong>Household</strong>, the red marker and percentile comparison can be
-                      switched between <strong>Individual Income</strong> (the taxpayer alone) and{' '}
-                      <strong>Household Income</strong> (adding cohabiting members&apos; gross
-                      employment income, gross public pension income, and other net income as
-                      entered). The chart&apos;s bars always reflect the individual taxpayer&apos;s
-                      take-home pay.
+                      The red marker and percentile comparison can be switched between{' '}
+                      <strong>Individual Income</strong> (the taxpayer alone) and{' '}
+                      <strong>Household Income</strong> (adding cohabiting members with{' '}
+                      <strong>Same registered address</strong> configured under{' '}
+                      <strong>Household</strong>: their gross employment income, gross public
+                      pension income, and other net income as entered). The chart&apos;s bars always
+                      reflect the individual taxpayer&apos;s take-home pay.
                     </Typography>
                     <Box component="dl" sx={{ m: 0 }}>
                       {HOUSEHOLD_TYPE_ORDER.map(type => (

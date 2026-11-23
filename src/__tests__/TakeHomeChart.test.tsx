@@ -133,7 +133,8 @@ describe('TakeHomeChart', () => {
     expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-border-color', '#fff');
   });
 
-  it('renders static Input Income without a basis selector when no same-household members exist', () => {
+  it('renders the basis selector without same-household members and ignores non-cohabiting income', async () => {
+    const user = userEvent.setup();
     const nonCohabitingDependent = makeDependent({
       isSameHousehold: false,
       isClaimedAsDependent: true,
@@ -146,11 +147,29 @@ describe('TakeHomeChart', () => {
 
     render(<TakeHomeChart {...baseProps} dependents={[nonCohabitingDependent]} />);
 
-    expect(screen.getByText('Input Income: ¥5,000,000')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('combobox', { name: 'Income comparison basis' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Individual Income',
+    );
+    expect(screen.getByText(/: ¥5,000,000/)).toBeInTheDocument();
     expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '5000000');
+
+    await user.click(screen.getByRole('combobox', { name: 'Income comparison basis' }));
+    await user.click(screen.getByRole('option', { name: 'Household Income' }));
+
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Household Income',
+    );
+    expect(screen.getByText(/: ¥5,000,000/)).toBeInTheDocument();
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-current-income', '5000000');
+  });
+
+  it('always renders the basis selector at default empty dependents', () => {
+    render(<TakeHomeChart {...baseProps} />);
+
+    expect(screen.getByRole('combobox', { name: 'Income comparison basis' })).toHaveTextContent(
+      'Individual Income',
+    );
+    expect(screen.getByText(/: ¥5,000,000/)).toBeInTheDocument();
   });
 
   it('defaults to Household Income when same-household members have income and updates marker and percentile', () => {
