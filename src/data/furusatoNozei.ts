@@ -62,3 +62,19 @@ export const TEMPORARY_INCOME_SPECIAL_DEDUCTION = 500_000;
  * Local Tax Act Arts. 32(2) & 313(2) (地方税法第32条第2項・第313条第2項).
  */
 export const TEMPORARY_INCOME_INCLUSION_DIVISOR = 2;
+
+/**
+ * Gross annual employment income threshold above which a salaried taxpayer is excluded from
+ * year-end adjustment and must file an income tax return (¥20,000,000).
+ * Source: Income Tax Act Art. 121(1)(i) (所得税法第121条第1項第1号).
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1900.htm
+ */
+export const MANDATORY_RETURN_SALARY_THRESHOLD = 20_000_000;
+
+/**
+ * Gross annual public pension income threshold above which a pensioner cannot use the
+ * no-return system for public pensions and must file an income tax return (¥4,000,000).
+ * Source: Income Tax Act Art. 121(3)(i) (所得税法第121条第3項第1号).
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm
+ */
+export const MANDATORY_RETURN_PENSION_THRESHOLD = 4_000_000;

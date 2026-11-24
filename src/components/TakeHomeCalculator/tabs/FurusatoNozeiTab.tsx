@@ -20,7 +20,9 @@ import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import {
   estimateFurusatoTemporaryIncome,
+  getOneStopIneligibilityReasons,
   hasHighOutOfPocketCost,
+  type OneStopIneligibilityReason,
 } from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
@@ -32,6 +34,16 @@ interface FurusatoNozeiTabProps {
 }
 
 const TEMPORARY_INCOME_DETAILS_ID = 'furusato-temporary-income-details';
+
+const ONE_STOP_INELIGIBILITY_LABELS: Record<OneStopIneligibilityReason, string> = {
+  taxableTemporaryIncome: 'taxable temporary income from Furusato Nozei return gifts',
+  employmentIncomeOverThreshold: 'gross employment income exceeding ¥20,000,000',
+  publicPensionOverThreshold: 'gross public pension income exceeding ¥4,000,000',
+  businessOrMiscIncome: 'business or miscellaneous income',
+  realEstateIncome: 'real estate income',
+  reportedInvestmentIncome: 'reported investment income',
+  medicalExpensesDeduction: 'medical expenses deduction',
+};
 
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
@@ -70,6 +82,25 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       foreignTaxCredit.prefecture +
       foreignTaxCredit.city >
       0;
+  const oneStopIneligibilityReasons = getOneStopIneligibilityReasons(results);
+  const oneStopReasonsText = oneStopIneligibilityReasons
+    .map(reason => ONE_STOP_INELIGIBILITY_LABELS[reason])
+    .join('; ');
+  const oneStopIneligibleNotice =
+    oneStopIneligibilityReasons.length > 0 ? (
+      <>
+        <Typography variant="body2" sx={{ mt: 1 }}>
+          The One-Stop system (ワンストップ特例制度) cannot be used to avoid this here because
+          filing a tax return is required ({oneStopReasonsText}).
+        </Typography>
+        {tempIncome.isTaxable && (
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Tax on temporary income from return gifts is shown separately under Effective Return
+            Analysis and is not included in the out-of-pocket cost above.
+          </Typography>
+        )}
+      </>
+    ) : null;
 
   return (
     <Box>
@@ -317,10 +348,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                           Home Loan Tax Credit already reduces Japanese national income tax to ¥0,
                           and any spillover into residence tax has reached its statutory cap.
                         </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                          If eligible (e.g. year 2+ of mortgage with salary income only), this issue
-                          is avoided by using the One-Stop system (ワンストップ特例制度).
-                        </Typography>
+                        {oneStopIneligibleNotice ?? (
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                            If eligible (e.g. year 2+ of mortgage with salary income only), this
+                            issue is avoided by using the One-Stop system (ワンストップ特例制度).
+                          </Typography>
+                        )}
                       </>
                     ) : results.highIncomeMinimumTax ? (
                       <>
@@ -343,9 +376,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                           happens when filing a tax return if taxable income changes income tax
                           brackets after applying the Furusato Nozei donation deduction.
                         </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                          This issue is avoided by using the One-Stop system (ワンストップ特例制度).
-                        </Typography>
+                        {oneStopIneligibleNotice ?? (
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                            This issue is avoided by using the One-Stop system
+                            (ワンストップ特例制度).
+                          </Typography>
+                        )}
                       </>
                     )}
                   </Box>

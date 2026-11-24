@@ -4,10 +4,12 @@
 import {
   FURUSATO_AVERAGE_GIFT_COST_RATE,
   FURUSATO_AVERAGE_SHIPPING_COST_RATE,
+  MANDATORY_RETURN_PENSION_THRESHOLD,
+  MANDATORY_RETURN_SALARY_THRESHOLD,
   TEMPORARY_INCOME_INCLUSION_DIVISOR,
   TEMPORARY_INCOME_SPECIAL_DEDUCTION,
 } from '../data/furusatoNozei';
-import type { FurusatoNozeiDetails } from '../types/tax';
+import type { FurusatoNozeiDetails, TakeHomeResults } from '../types/tax';
 
 // The nominal out-of-pocket cost at the limit is 2,000 yen. The residence tax
 // credits are floored to 100 yen separately for the municipal and prefectural
@@ -111,4 +113,51 @@ export const estimateFurusatoTemporaryIncome = (
     additionalResidenceTax: temporaryIncomeTax?.residenceTax ?? 0,
     additionalTotalTax: temporaryIncomeTax?.total ?? 0,
   };
+};
+
+export type OneStopIneligibilityReason =
+  | 'taxableTemporaryIncome'
+  | 'employmentIncomeOverThreshold'
+  | 'publicPensionOverThreshold'
+  | 'businessOrMiscIncome'
+  | 'realEstateIncome'
+  | 'reportedInvestmentIncome'
+  | 'medicalExpensesDeduction';
+
+/**
+ * Returns known reasons why the One-Stop Exception system (ワンストップ特例制度) cannot be used
+ * based on {@link TakeHomeResults}, because filing an income or residence tax return is required
+ * (Local Tax Act Supplementary Provisions Art. 7(1) / 地方税法附則第7条第1項; Income Tax Act
+ * Arts. 120, 121, 73 / 所得税法第120条・第121条・第73条; Local Tax Act Art. 45-2 / 地方税法第45条の2).
+ *
+ * Returns an empty array when no return-filing trigger is known from the results.
+ */
+export const getOneStopIneligibilityReasons = (
+  results: TakeHomeResults,
+): OneStopIneligibilityReason[] => {
+  const reasons: OneStopIneligibilityReason[] = [];
+
+  if (hasTaxableFurusatoTemporaryIncome(results.furusatoNozei)) {
+    reasons.push('taxableTemporaryIncome');
+  }
+  if (results.grossEmploymentIncome > MANDATORY_RETURN_SALARY_THRESHOLD) {
+    reasons.push('employmentIncomeOverThreshold');
+  }
+  if ((results.grossPublicPensionIncome ?? 0) > MANDATORY_RETURN_PENSION_THRESHOLD) {
+    reasons.push('publicPensionOverThreshold');
+  }
+  if (results.netBusinessAndMiscIncome !== 0 || (results.businessBlueFilerDeduction ?? 0) > 0) {
+    reasons.push('businessOrMiscIncome');
+  }
+  if (results.realEstate !== undefined) {
+    reasons.push('realEstateIncome');
+  }
+  if (results.investmentIncome?.reported !== undefined) {
+    reasons.push('reportedInvestmentIncome');
+  }
+  if (results.additionalDeductions.items.some(item => item.key === 'medical')) {
+    reasons.push('medicalExpensesDeduction');
+  }
+
+  return reasons;
 };

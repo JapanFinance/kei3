@@ -219,6 +219,103 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     ).toBeInTheDocument();
   });
 
+  it('suppresses One-Stop advice in Branch 4 when taxable temporary income and high salary require filing', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      grossEmploymentIncome: 44_000_000,
+      nationalIncomeTax: 12_000_000,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 1_830_000,
+        incomeTaxReduction: 760_600,
+        residenceTaxReduction: 988_200,
+        outOfPocketCost: 81_200,
+        temporaryIncomeTax: {
+          nationalIncomeTax: 18_400,
+          residenceTax: 4_000,
+          total: 22_400,
+        },
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /This happens when filing a tax return if taxable income changes income tax brackets after applying the Furusato Nozei donation deduction/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /The One-Stop system \(ワンストップ特例制度\) cannot be used to avoid this here because filing a tax return is required \(taxable temporary income from Furusato Nozei return gifts; gross employment income exceeding ¥20,000,000\)/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Tax on temporary income from return gifts is shown separately under Effective Return Analysis and is not included in the out-of-pocket cost above/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/This issue is avoided by using the One-Stop system/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('suppresses One-Stop advice in Branch 4 when salary exceeds ¥20,000,000 without taxable temporary income', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      grossEmploymentIncome: 23_000_000,
+      nationalIncomeTax: 4_500_000,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 771_000,
+        incomeTaxReduction: 310_000,
+        residenceTaxReduction: 458_400,
+        outOfPocketCost: 2_600,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(
+      screen.getByText(
+        /The One-Stop system \(ワンストップ特例制度\) cannot be used to avoid this here because filing a tax return is required \(gross employment income exceeding ¥20,000,000\)/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Tax on temporary income from return gifts is shown separately/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/This issue is avoided by using the One-Stop system/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('suppresses One-Stop advice in Branch 3 when Home Loan Tax Credit applies alongside a return-filing trigger', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      grossEmploymentIncome: 25_000_000,
+      nationalIncomeTax: 0,
+      homeLoanTaxCredit: mockHomeLoanCredit,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 852_000,
+        incomeTaxReduction: 0,
+        residenceTaxReduction: 750_000,
+        outOfPocketCost: 102_000,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(
+      screen.getByText(
+        /because the Home Loan Tax Credit already reduces Japanese national income tax to ¥0, and any spillover into residence tax has reached its statutory cap/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /The One-Stop system \(ワンストップ特例制度\) cannot be used to avoid this here because filing a tax return is required \(gross employment income exceeding ¥20,000,000\)/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/If eligible.*this issue is avoided by using the One-Stop system/s),
+    ).not.toBeInTheDocument();
+  });
+
   it('renders fallback placeholder when limit is 0', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({ limit: 0 }),

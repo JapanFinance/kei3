@@ -8,10 +8,11 @@ import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types
 import {
   estimateFurusatoEconomicBenefit,
   estimateFurusatoTemporaryIncome,
+  getOneStopIneligibilityReasons,
   hasTaxableFurusatoTemporaryIncome,
 } from '../utils/furusatoNozei';
 import { calculateTaxes } from '../utils/taxCalculations';
-import { makeFurusatoNozeiDetails } from './fixtures/takeHomeResults';
+import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 const baseInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -219,5 +220,74 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
         (withDonationAndTemp.residenceTax.totalResidenceTax -
           withDonationOnly.residenceTax.totalResidenceTax),
     });
+  });
+});
+
+describe('getOneStopIneligibilityReasons', () => {
+  it('returns empty array for an ordinary salary earner with non-taxable gift benefit', () => {
+    const results = makeTakeHomeResults({
+      grossEmploymentIncome: 6_000_000,
+      furusatoNozei: makeFurusatoNozeiDetails({ limit: 60_000, outOfPocketCost: 2_000 }),
+    });
+
+    expect(getOneStopIneligibilityReasons(results)).toEqual([]);
+  });
+
+  it('detects taxable temporary income and salary over ¥20,000,000', () => {
+    const results = makeTakeHomeResults({
+      grossEmploymentIncome: 44_000_000,
+      furusatoNozei: makeFurusatoNozeiDetails({ limit: 1_830_000, outOfPocketCost: 81_200 }),
+    });
+
+    expect(getOneStopIneligibilityReasons(results)).toEqual([
+      'taxableTemporaryIncome',
+      'employmentIncomeOverThreshold',
+    ]);
+  });
+
+  it('enforces exact statutory thresholds for employment and public pension income', () => {
+    const atThreshold = makeTakeHomeResults({
+      grossEmploymentIncome: 20_000_000,
+      grossPublicPensionIncome: 4_000_000,
+    });
+    const overThreshold = makeTakeHomeResults({
+      grossEmploymentIncome: 20_000_001,
+      grossPublicPensionIncome: 4_000_001,
+    });
+
+    expect(getOneStopIneligibilityReasons(atThreshold)).toEqual([]);
+    expect(getOneStopIneligibilityReasons(overThreshold)).toEqual([
+      'employmentIncomeOverThreshold',
+      'publicPensionOverThreshold',
+    ]);
+  });
+
+  it('detects business/misc, real estate, reported investment, and medical expense triggers', () => {
+    const results = makeTakeHomeResults({
+      netBusinessAndMiscIncome: -100_000,
+      businessBlueFilerDeduction: 100_000,
+      realEstate: { netIncome: 500_000, blueFilerDeduction: 0 },
+      investmentIncome: {
+        reported: {
+          capitalGains: 200_000,
+          dividends: 0,
+          taxation: 'separate',
+        } as unknown as NonNullable<
+          ReturnType<typeof makeTakeHomeResults>['investmentIncome']
+        >['reported'],
+      },
+      additionalDeductions: {
+        national: 50_000,
+        residence: 50_000,
+        items: [{ key: 'medical', national: 50_000, residence: 50_000 }],
+      },
+    });
+
+    expect(getOneStopIneligibilityReasons(results)).toEqual([
+      'businessOrMiscIncome',
+      'realEstateIncome',
+      'reportedInvestmentIncome',
+      'medicalExpensesDeduction',
+    ]);
   });
 });
