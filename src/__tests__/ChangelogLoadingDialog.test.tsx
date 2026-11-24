@@ -48,4 +48,19 @@ describe('ChangelogLoadingDialog', () => {
 
     expect(findSpinner()).not.toBeInTheDocument();
   });
+
+  it('renders a status spinner with a prefers-reduced-motion rule', () => {
+    render(<ChangelogLoadingDialog onClose={vi.fn()} />);
+
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(
+      Array.from(document.head.querySelectorAll('style')).some(style =>
+        style.textContent?.includes('prefers-reduced-motion'),
+      ),
+    ).toBe(true);
+  });
 });
