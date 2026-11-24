@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { ThemeProvider, useColorScheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 
 import TakeHomeChart, { MAX_CHART_INCOME } from '../components/TakeHomeCalculator/TakeHomeChart';
 import { HOUSEHOLD_INCOME_DISTRIBUTIONS } from '../data/income';
@@ -21,7 +22,10 @@ vi.mock('react-chartjs-2', () => ({
     options,
   }: {
     data?: { datasets?: { label?: string; borderColor?: string }[] };
-    options?: { plugins?: { customPlugin?: { data?: { currentIncome?: number } } } };
+    options?: {
+      animation?: false | object;
+      plugins?: { customPlugin?: { data?: { currentIncome?: number } } };
+    };
   }) => {
     const health = data?.datasets?.find(d => d.label === 'Health Insurance');
     return (
@@ -29,6 +33,13 @@ vi.mock('react-chartjs-2', () => ({
         data-testid="chart-canvas"
         data-border-color={health?.borderColor}
         data-current-income={options?.plugins?.customPlugin?.data?.currentIncome}
+        data-animation={
+          options?.animation === false
+            ? 'false'
+            : options?.animation === undefined
+              ? 'undefined'
+              : 'object'
+        }
       />
     );
   },
@@ -48,6 +59,10 @@ const baseProps: React.ComponentProps<typeof TakeHomeChart> = {
 };
 
 describe('TakeHomeChart', () => {
+  afterEach(() => {
+    vi.mocked(useMediaQuery).mockImplementation(() => false);
+  });
+
   it('renders the chart and controls when income is within the supported range', () => {
     render(<TakeHomeChart {...baseProps} currentIncome={5_000_000} />);
 
@@ -318,5 +333,24 @@ describe('TakeHomeChart', () => {
     expect(
       screen.getByText(new RegExp(`This income is in the top ~${topPercent}% of`)),
     ).toBeInTheDocument();
+  });
+
+  it('enables chart animations on md+ viewports when reduced motion is not requested', () => {
+    vi.mocked(useMediaQuery).mockImplementation(query => String(query).includes('min-width'));
+
+    render(<TakeHomeChart {...baseProps} />);
+
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-animation', 'undefined');
+  });
+
+  it('disables chart animations when prefers-reduced-motion is enabled', () => {
+    vi.mocked(useMediaQuery).mockImplementation(
+      query =>
+        String(query).includes('min-width') || String(query).includes('prefers-reduced-motion'),
+    );
+
+    render(<TakeHomeChart {...baseProps} />);
+
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-animation', 'false');
   });
 });

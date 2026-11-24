@@ -67,6 +67,8 @@ export default function ChangelogLoadingDialog({ onClose }: { onClose: () => voi
         }}
       >
         <Box
+          role="status"
+          aria-label="Loading"
           sx={{
             width: 48,
             height: 48,
@@ -75,6 +77,11 @@ export default function ChangelogLoadingDialog({ onClose }: { onClose: () => voi
             borderColor: 'primary.main',
             borderTopColor: 'transparent',
             animation: `${spin} 1s linear infinite`,
+            '@media (prefers-reduced-motion: reduce)': {
+              animation: 'none',
+              borderTopColor: 'primary.main',
+              opacity: 0.4,
+            },
           }}
         />
       </Box>

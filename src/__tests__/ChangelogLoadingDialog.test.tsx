@@ -5,6 +5,7 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ChangelogLoadingDialog from '../components/ChangelogLoadingDialog';
+import { getReducedMotionStyles } from './fixtures/reducedMotionStyles';
 
 describe('ChangelogLoadingDialog', () => {
   beforeEach(() => {
@@ -47,5 +48,20 @@ describe('ChangelogLoadingDialog', () => {
     });
 
     expect(findSpinner()).not.toBeInTheDocument();
+  });
+
+  it('renders a status spinner with a prefers-reduced-motion rule', () => {
+    render(<ChangelogLoadingDialog onClose={vi.fn()} />);
+
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    const spinner = screen.getByRole('status', { name: 'Loading' });
+    expect(spinner).toBeInTheDocument();
+
+    const reducedMotionStyles = getReducedMotionStyles(spinner);
+    expect(reducedMotionStyles.some(style => style.animation === 'none')).toBe(true);
+    expect(reducedMotionStyles.some(style => style.opacity === '0.4')).toBe(true);
   });
 });

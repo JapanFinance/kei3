@@ -366,9 +366,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   // Below md the page is a single column with the chart under the form and the results, so the
   // chart is off-screen while the inputs change. Chart.js still redraws an off-screen canvas on
-  // every frame of its 1 s update animation, so there the chart is drawn once per update, and
-  // its tooltips appear without a transition.
-  const animateChart = useMediaQuery(theme.breakpoints.up('md'));
+  // every frame of its 1 s update animation, so there (and whenever the user prefers reduced
+  // motion via `(prefers-reduced-motion: reduce)`) the chart is drawn once per update, and its
+  // tooltips appear without a transition.
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const animateChart = isDesktop && !prefersReducedMotion;
 
   const chartRef = useRef<ChartJS<'bar' | 'line'>>(null);
 
@@ -711,6 +714,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 alignItems: 'center',
                 opacity: yourIncomeIsVisibleInChart ? 1 : 0.5,
                 transition: 'opacity 0.3s ease-in-out',
+                '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                 gap: 1,
               }}
             >
@@ -764,6 +768,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 alignItems: 'center',
                 opacity: medianIncomeIsVisibleInChart ? 1 : 0.5,
                 transition: 'opacity 0.3s ease-in-out',
+                '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                 gap: 1,
               }}
             >

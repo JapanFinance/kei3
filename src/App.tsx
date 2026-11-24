@@ -186,6 +186,9 @@ function App() {
                   borderRadius: 1,
                   bgcolor: 'action.hover',
                   animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                  '@media (prefers-reduced-motion: reduce)': {
+                    animation: 'none',
+                  },
                   '@keyframes pulse': {
                     '0%, 100%': { opacity: 1 },
                     '50%': { opacity: 0.5 },
@@ -208,6 +211,9 @@ function App() {
                 borderRadius: 1,
                 bgcolor: 'action.hover',
                 animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                '@media (prefers-reduced-motion: reduce)': {
+                  animation: 'none',
+                },
               }}
             />
           }
