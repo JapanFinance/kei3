@@ -2,7 +2,11 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-11-27: Fix Furusato Nozei limit for 2026 basic deduction increase
+## 2026-11-27: Furusato Nozei temporary income estimate and basic deduction fix
+
+### New
+
+- Added a collapsible temporary income ([一時所得](https://www.nta.go.jp/law/shitsugi/shotoku/02/37.htm)) breakdown on the Furusato Nozei tab for return gifts, including delivery/shipping costs (5.7% per the MIC FY2025 survey, matching [National Tax Tribunal](https://www.kfs.go.jp/service/JP/126/02/index.html) and court valuation rulings). When the estimated economic benefit exceeds the ¥500,000 special deduction, the row displays warning emphasis, the tax engine computes the resulting income and residence tax on the ½ taxable temporary income, and Net Estimated Benefit reflects that tax.
 
 ### Fixed
 
@@ -27,10 +31,6 @@ Anyone who calculated their Furusato Nozei limit using this calculator for 2026 
 - Re-designed the "What's New" dialog with better usability, including search, filtering, and deep-linking.
 
 ## 2026-11-23: Furusato Nozei return ratio and chart household income comparison
-
-### New
-
-- Added a collapsible temporary income ([一時所得](https://www.nta.go.jp/law/shitsugi/shotoku/02/37.htm)) breakdown on the Furusato Nozei tab for return gifts, including delivery/shipping costs (5.7% per the MIC FY2025 survey, matching [National Tax Tribunal](https://www.kfs.go.jp/service/JP/126/02/index.html) and court valuation rulings). When the estimated economic benefit exceeds the ¥500,000 special deduction, the row displays warning emphasis, the tax engine computes the resulting income and residence tax on the ½ taxable temporary income, and Net Estimated Benefit reflects that tax.
 
 ### Updated
 
