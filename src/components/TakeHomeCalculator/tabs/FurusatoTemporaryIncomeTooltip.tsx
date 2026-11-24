@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
@@ -30,7 +31,16 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
   const combinedPct = FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE.toPercent(1);
 
   return (
-    <DetailedTooltip title="Temporary Income from Furusato Nozei" icon={SIMPLE_TOOLTIP_ICON}>
+    <DetailedTooltip
+      title="Temporary Income from Furusato Nozei"
+      icon={
+        estimate.isTaxable ? <WarningIcon fontSize="small" color="warning" /> : SIMPLE_TOOLTIP_ICON
+      }
+      {...(estimate.isTaxable && {
+        iconSx: { color: 'warning.main' },
+        iconAriaLabel: 'Taxable temporary income warning',
+      })}
+    >
       <Box>
         <Typography variant="body2" sx={{ mb: 1 }}>
           Return gifts (返礼品) received from municipalities are treated as gifts from a corporation
@@ -52,37 +62,35 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
           income combined in the calendar year (such as insurance maturity payouts or prizes). Half
           (½) of any excess is added to aggregate taxable income (総所得金額).
         </Typography>
-        <Typography variant="body2" sx={{ mb: estimate.estimatedTotalTax > 0 ? 1 : 0 }}>
+        <Typography variant="body2" sx={{ mb: estimate.additionalTotalTax > 0 ? 1 : 0 }}>
           <strong>Delivery Year & Filing:</strong> Return gifts are recognized in the calendar year
           delivered, not the year donated. When taxable temporary income arises, filing a tax return
           (確定申告) is required, so the One-Stop Exception (ワンストップ特例制度) does not apply to
           that year's donations.
         </Typography>
-        {estimate.estimatedTotalTax > 0 && (
+        {estimate.additionalTotalTax > 0 && (
           <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              Estimated Additional Tax Breakdown
+              Additional Tax Breakdown
             </Typography>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
               <tbody>
                 <tr>
-                  <td style={{ padding: '2px 0' }}>
-                    Income tax & surtax{estimate.usesMinimumTaxRate ? ' (minimum tax floor)' : ''}:
-                  </td>
+                  <td style={{ padding: '2px 0' }}>Income tax & surtax:</td>
                   <td style={{ padding: '2px 0', textAlign: 'right' }}>
-                    ≈ {formatJPY(estimate.estimatedNationalIncomeTax)}
+                    {formatJPY(estimate.additionalNationalIncomeTax)}
                   </td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '2px 0' }}>Residence tax (10%):</td>
+                  <td style={{ padding: '2px 0' }}>Residence tax:</td>
                   <td style={{ padding: '2px 0', textAlign: 'right' }}>
-                    ≈ {formatJPY(estimate.estimatedResidenceTax)}
+                    {formatJPY(estimate.additionalResidenceTax)}
                   </td>
                 </tr>
                 <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-                  <td style={{ padding: '4px 0', fontWeight: 600 }}>Total estimated tax:</td>
+                  <td style={{ padding: '4px 0', fontWeight: 600 }}>Total additional tax:</td>
                   <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                    ≈ {formatJPY(estimate.estimatedTotalTax)}
+                    {formatJPY(estimate.additionalTotalTax)}
                   </td>
                 </Box>
               </tbody>
@@ -91,9 +99,9 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
               variant="caption"
               sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}
             >
-              Additional tax is estimated marginally from the current tax profile assuming donations
-              at the full limit, no other temporary income, and delivery in the same tax-profile
-              year.
+              Calculated by the tax engine on the estimated temporary income above (assuming
+              donations at the limit, no other temporary income, and delivery within the same tax
+              year).
             </Typography>
           </Box>
         )}

@@ -943,6 +943,13 @@ export interface TakeHomeInputs {
    * donation.
    */
   furusatoDonation?: number | undefined;
+  /**
+   * Gross temporary income (一時所得の総収入金額, net of any direct expenses) in yen, before the
+   * ¥500,000 annual special deduction (特別控除, 所得税法第34条第3項) and ½ inclusion in 総所得金額
+   * (所得税法第22条第2項第2号). Currently engine-only (not exposed in the form UI) and used to
+   * compute the exact tax impact of Furusato Nozei return gifts. Absent or ≤ 0 means none.
+   */
+  temporaryIncome?: number | undefined;
   /** How household NHI premiums are attributed to the taxpayer */
   nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
   /** Region used for household NHI when taxpayer is on non-NHI provider */
@@ -1330,6 +1337,20 @@ export type NonTaxableResidenceTaxStatus =
   | 'singleParent'
   | 'incomeThreshold';
 
+/**
+ * Incremental income and residence tax computed by the tax engine when the estimated economic
+ * benefit of Furusato Nozei return gifts (26.5% goods + 5.7% shipping) exceeds the ¥500,000
+ * temporary income special deduction.
+ */
+export interface FurusatoTemporaryIncomeTax {
+  /** Incremental national income tax (incl. reconstruction surtax, credits, and minimum tax). */
+  nationalIncomeTax: number;
+  /** Incremental residence tax (municipal + prefectural, after ¥100 flooring and credits). */
+  residenceTax: number;
+  /** Total additional tax (`nationalIncomeTax + residenceTax`). */
+  total: number;
+}
+
 export interface FurusatoNozeiDetails {
   limit: number;
   incomeTaxReduction: number;
@@ -1337,6 +1358,7 @@ export interface FurusatoNozeiDetails {
   residenceTaxSpecialDeduction: number;
   outOfPocketCost: number;
   residenceTaxReduction: number;
+  temporaryIncomeTax?: FurusatoTemporaryIncomeTax | undefined;
 }
 
 export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {

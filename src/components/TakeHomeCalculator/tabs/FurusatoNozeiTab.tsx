@@ -36,20 +36,9 @@ const TEMPORARY_INCOME_DETAILS_ID = 'furusato-temporary-income-details';
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const tempIncome = estimateFurusatoTemporaryIncome(results);
-  const [expandedOverride, setExpandedOverride] = useState<{
-    forTaxable: boolean;
-    expanded: boolean;
-  } | null>(null);
-  const showTemporaryIncomeDetails =
-    expandedOverride?.forTaxable === tempIncome.isTaxable
-      ? expandedOverride.expanded
-      : tempIncome.isTaxable;
-  const handleToggleTemporaryIncome = () =>
-    setExpandedOverride({
-      forTaxable: tempIncome.isTaxable,
-      expanded: !showTemporaryIncomeDetails,
-    });
+  const tempIncome = estimateFurusatoTemporaryIncome(results.furusatoNozei);
+  const [showTemporaryIncomeDetails, setShowTemporaryIncomeDetails] = useState(false);
+  const handleToggleTemporaryIncome = () => setShowTemporaryIncomeDetails(open => !open);
 
   // If no Furusato Nozei data, show a message
   if (results.furusatoNozei.limit <= 0) {
@@ -72,7 +61,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const netEstimatedBenefit =
     tempIncome.estimatedGoodsValue -
     results.furusatoNozei.outOfPocketCost -
-    tempIncome.estimatedTotalTax;
+    tempIncome.additionalTotalTax;
   const foreignTaxCredit = results.foreignTaxCredit?.credit;
   const hasForeignTaxCredit =
     foreignTaxCredit !== undefined &&
@@ -399,17 +388,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           type="indented"
         />
 
-        {tempIncome.estimatedTotalTax > 0 && (
+        {tempIncome.additionalTotalTax > 0 && (
           <ResultRow
-            label={
-              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-                Estimated Tax on Temporary Income
-                <WarningIcon color="warning" aria-hidden sx={{ ml: 0.5, fontSize: '1rem' }} />
-              </Box>
-            }
+            label="Tax on Temporary Income*"
             value={
               <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
-                ≈ {formatJPY(-tempIncome.estimatedTotalTax)}
+                ≈ {formatJPY(-tempIncome.additionalTotalTax)}
               </Box>
             }
             type="indented"
@@ -446,17 +430,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           <ResultRow
             label={
               tempIncome.isTaxable ? (
-                <Box
-                  component="span"
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    fontWeight: 600,
-                    color: 'text.primary',
-                  }}
-                >
+                <Box component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
                   Temporary Income Estimate (一時所得)
-                  <WarningIcon color="warning" aria-hidden sx={{ ml: 0.5, fontSize: '1rem' }} />
                 </Box>
               ) : (
                 'Temporary Income Estimate (一時所得)'
@@ -475,7 +450,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             labelSuffix={<FurusatoTemporaryIncomeTooltip estimate={tempIncome} />}
             value={
               tempIncome.isTaxable ? (
-                <Box component="span" sx={{ fontWeight: 600 }}>
+                <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
                   ≈ {formatJPY(tempIncome.estimatedEconomicBenefit)}
                 </Box>
               ) : (
@@ -526,16 +501,14 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                     }
                     type="detail-subtotal"
                   />
-                  <ResultRow
-                    label="Estimated additional tax"
-                    sublabel={
-                      tempIncome.estimatedTotalTax > 0
-                        ? `Income tax ≈ ${formatJPY(tempIncome.estimatedNationalIncomeTax)} + Residence tax ≈ ${formatJPY(tempIncome.estimatedResidenceTax)}`
-                        : undefined
-                    }
-                    value={`≈ ${formatJPY(tempIncome.estimatedTotalTax)}`}
-                    type="detail"
-                  />
+                  {tempIncome.additionalTotalTax > 0 && (
+                    <ResultRow
+                      label="Additional tax"
+                      sublabel={`Income tax ${formatJPY(tempIncome.additionalNationalIncomeTax)} + Residence tax ${formatJPY(tempIncome.additionalResidenceTax)}`}
+                      value={formatJPY(tempIncome.additionalTotalTax)}
+                      type="detail"
+                    />
+                  )}
                   <Typography
                     variant="caption"
                     sx={{ color: 'text.secondary', pl: 3.5, pt: 0.5, display: 'block' }}

@@ -3,18 +3,30 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { percentTo } from '../data/rate';
-import type { HighIncomeMinimumTaxResult } from '../types/tax';
+import { DEFAULT_PROVIDER } from '../types/healthInsurance';
+import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   estimateFurusatoEconomicBenefit,
   estimateFurusatoTemporaryIncome,
   hasTaxableFurusatoTemporaryIncome,
 } from '../utils/furusatoNozei';
-import {
-  makeFurusatoNozeiDetails,
-  makeResidenceTaxDetails,
-  makeTakeHomeResults,
-} from './fixtures/takeHomeResults';
+import { calculateTaxes } from '../utils/taxCalculations';
+import { makeFurusatoNozeiDetails } from './fixtures/takeHomeResults';
+
+const baseInputs = {
+  ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  incomeStreams: [
+    { id: 's1', type: 'salary' as const, amount: 6_000_000, frequency: 'annual' as const },
+  ],
+  ageRange: 'age20to39' as const,
+  region: 'Tokyo',
+  healthInsuranceProvider: DEFAULT_PROVIDER,
+  dependents: [],
+  dcPlanContributions: 0,
+  manualSocialInsuranceEntry: false,
+  manualSocialInsuranceAmount: 0,
+  incomeYear: DEFAULT_INCOME_YEAR,
+};
 
 describe('estimateFurusatoEconomicBenefit', () => {
   it('returns zeros when donation limit is zero or negative', () => {
@@ -56,104 +68,156 @@ describe('hasTaxableFurusatoTemporaryIncome', () => {
 
 describe('estimateFurusatoTemporaryIncome', () => {
   it('leaves taxable temporary income and additional tax at zero below ¥500,000', () => {
-    const results = makeTakeHomeResults({
-      taxableIncomeForNationalIncomeTax: 3_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 60_000, outOfPocketCost: 2_000 }),
-    });
+    const furusatoNozei = makeFurusatoNozeiDetails({ limit: 60_000, outOfPocketCost: 2_000 });
 
-    const estimate = estimateFurusatoTemporaryIncome(results);
+    const estimate = estimateFurusatoTemporaryIncome(furusatoNozei);
 
     expect(estimate.isTaxable).toBe(false);
     expect(estimate.remainingDeductionAllowance).toBe(480_680);
     expect(estimate.netTemporaryIncome).toBe(0);
     expect(estimate.taxableTemporaryIncome).toBe(0);
-    expect(estimate.estimatedTotalTax).toBe(0);
-    expect(estimate.usesMinimumTaxRate).toBe(false);
+    expect(estimate.additionalNationalIncomeTax).toBe(0);
+    expect(estimate.additionalResidenceTax).toBe(0);
+    expect(estimate.additionalTotalTax).toBe(0);
   });
 
-  it('computes ½ taxable temporary income and marginal tax in the top 45% bracket', () => {
-    const results = makeTakeHomeResults({
-      taxableIncomeForNationalIncomeTax: 45_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 2_200_000, outOfPocketCost: 2_000 }),
+  it('floors ½ taxable temporary income to whole yen and surfaces engine tax breakdown', () => {
+    const furusatoNozei = makeFurusatoNozeiDetails({
+      limit: 1_553_005,
+      outOfPocketCost: 2_000,
+      temporaryIncomeTax: { nationalIncomeTax: 100, residenceTax: 0, total: 100 },
     });
 
-    const estimate = estimateFurusatoTemporaryIncome(results);
-
-    expect(estimate.estimatedGoodsValue).toBe(583_000);
-    expect(estimate.estimatedShippingCost).toBe(125_400);
-    expect(estimate.estimatedEconomicBenefit).toBe(708_400);
-    expect(estimate.netTemporaryIncome).toBe(208_400);
-    expect(estimate.taxableTemporaryIncome).toBe(104_200);
-    expect(estimate.isTaxable).toBe(true);
-    expect(estimate.estimatedNationalIncomeTax).toBe(47_874);
-    expect(estimate.estimatedResidenceTax).toBe(10_420);
-    expect(estimate.estimatedTotalTax).toBe(58_294);
-    expect(estimate.usesMinimumTaxRate).toBe(false);
-  });
-
-  it('prices incremental national tax accurately across a progressive bracket boundary', () => {
-    const results = makeTakeHomeResults({
-      taxableIncomeForNationalIncomeTax: 39_950_000,
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 2_200_000, outOfPocketCost: 2_000 }),
-    });
-
-    const estimate = estimateFurusatoTemporaryIncome(results);
-
-    // ¥50,000 taxed at 40% (¥20,000) + ¥54,200 taxed at 45% (¥24,390) = ¥44,390 base + ¥932 surtax
-    expect(estimate.estimatedNationalIncomeTax).toBe(45_322);
-    expect(estimate.estimatedResidenceTax).toBe(10_420);
-    expect(estimate.estimatedTotalTax).toBe(55_742);
-  });
-
-  it('floors ½ taxable temporary income to whole yen for odd net temporary income', () => {
-    const results = makeTakeHomeResults({
-      taxableIncomeForNationalIncomeTax: 45_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 1_553_005, outOfPocketCost: 2_000 }),
-    });
-
-    const estimate = estimateFurusatoTemporaryIncome(results);
+    const estimate = estimateFurusatoTemporaryIncome(furusatoNozei);
 
     expect(estimate.estimatedEconomicBenefit).toBe(500_067);
     expect(estimate.netTemporaryIncome).toBe(67);
     expect(estimate.taxableTemporaryIncome).toBe(33);
+    expect(estimate.isTaxable).toBe(true);
+    expect(estimate.additionalNationalIncomeTax).toBe(100);
+    expect(estimate.additionalResidenceTax).toBe(0);
+    expect(estimate.additionalTotalTax).toBe(100);
+  });
+});
+
+describe('taxCalculations temporaryIncome and Furusato Nozei integration', () => {
+  it('leaves taxes unchanged when temporaryIncome is at or below ¥500,000', () => {
+    const baseline = calculateTaxes(baseInputs);
+    const withExemptTemp = calculateTaxes({ ...baseInputs, temporaryIncome: 500_000 });
+
+    expect(withExemptTemp.totalNetIncome).toBe(baseline.totalNetIncome);
+    expect(withExemptTemp.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+    expect(withExemptTemp.residenceTax.totalResidenceTax).toBe(
+      baseline.residenceTax.totalResidenceTax,
+    );
   });
 
-  it('accounts for the high-income minimum tax floor when active', () => {
-    const minimumTax: HighIncomeMinimumTaxResult = {
-      baselineIncome: 353_560_000,
-      threshold: 165_000_000,
-      taxableExcess: 188_560_000,
-      rate: percentTo(1)(30),
-      taxOnExcess: 56_568_000,
-      baselineIncomeTax: 53_788_526,
-      additionalIncomeTax: 2_837_842,
-      additionalReconstructionSurtax: 58_368,
-      totalAdditionalTax: 2_896_210,
+  it('includes ½ of net temporary income above ¥500,000 in totalNetIncome and taxable bases', () => {
+    const baseline = calculateTaxes(baseInputs);
+    const withTemp = calculateTaxes({ ...baseInputs, temporaryIncome: 1_500_001 });
+
+    // net = 1,000,001; floor(net / 2) = 500,000
+    expect(withTemp.totalNetIncome).toBe(baseline.totalNetIncome + 500_000);
+    expect(withTemp.taxableIncomeForNationalIncomeTax).toBe(
+      baseline.taxableIncomeForNationalIncomeTax! + 500_000,
+    );
+    expect(withTemp.residenceTax.taxableIncome).toBe(baseline.residenceTax.taxableIncome + 500_000);
+    expect(withTemp.nationalIncomeTax).toBeGreaterThan(baseline.nationalIncomeTax);
+    expect(withTemp.residenceTax.totalResidenceTax).toBeGreaterThan(
+      baseline.residenceTax.totalResidenceTax,
+    );
+  });
+
+  it('offsets ordinary operating losses against temporary income before ½ inclusion', () => {
+    const results = calculateTaxes({
+      ...baseInputs,
+      incomeStreams: [{ id: 'b1', type: 'business', amount: -400_000 }],
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+      temporaryIncome: 1_200_000,
+    });
+
+    // Net temporary income = 700,000; loss-netted before halving = 700,000 - 400,000 = 300,000;
+    // ½ inclusion -> 150,000 (not floor(700,000 / 2) - 400,000 = 0).
+    expect(results.totalNetIncome).toBe(150_000);
+  });
+
+  it('leaves furusatoNozei.temporaryIncomeTax undefined for typical incomes', () => {
+    const results = calculateTaxes(baseInputs);
+
+    expect(results.furusatoNozei.temporaryIncomeTax).toBeUndefined();
+  });
+
+  it('computes exact furusatoNozei.temporaryIncomeTax via the engine for high-limit salaries', () => {
+    const highInputs = {
+      ...baseInputs,
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 55_000_000, frequency: 'annual' as const },
+      ],
     };
-    const results = makeTakeHomeResults({
-      taxableIncomeForNationalIncomeTax: 0,
-      highIncomeMinimumTax: minimumTax,
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 2_200_000, outOfPocketCost: 2_000 }),
+
+    const results = calculateTaxes(highInputs);
+    const limit = results.furusatoNozei.limit;
+    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const withDonationOnly = calculateTaxes({ ...highInputs, furusatoDonation: limit });
+    const withDonationAndTemp = calculateTaxes({
+      ...highInputs,
+      furusatoDonation: limit,
+      temporaryIncome: benefit.estimatedEconomicBenefit,
     });
 
-    const estimate = estimateFurusatoTemporaryIncome(results);
-
-    expect(estimate.usesMinimumTaxRate).toBe(true);
-    expect(estimate.estimatedNationalIncomeTax).toBe(31_805);
-    expect(estimate.estimatedResidenceTax).toBe(10_420);
-    expect(estimate.estimatedTotalTax).toBe(42_225);
+    expect(benefit.estimatedEconomicBenefit).toBeGreaterThan(500_000);
+    expect(results.furusatoNozei.temporaryIncomeTax).toEqual({
+      nationalIncomeTax: withDonationAndTemp.nationalIncomeTax - withDonationOnly.nationalIncomeTax,
+      residenceTax:
+        withDonationAndTemp.residenceTax.totalResidenceTax -
+        withDonationOnly.residenceTax.totalResidenceTax,
+      total:
+        withDonationAndTemp.nationalIncomeTax -
+        withDonationOnly.nationalIncomeTax +
+        (withDonationAndTemp.residenceTax.totalResidenceTax -
+          withDonationOnly.residenceTax.totalResidenceTax),
+    });
+    expect(results.furusatoNozei.temporaryIncomeTax!.total).toBeGreaterThan(0);
   });
 
-  it('omits residence tax when residence tax is exempt', () => {
-    const results = makeTakeHomeResults({
-      taxableIncomeForNationalIncomeTax: 45_000_000,
-      residenceTax: makeResidenceTaxDetails({ nonTaxableStatus: 'incomeThreshold' }),
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 2_200_000, outOfPocketCost: 2_000 }),
+  it('computes exact furusatoNozei.temporaryIncomeTax when high-income minimum tax applies', () => {
+    const minTaxInputs = {
+      ...baseInputs,
+      incomeStreams: [
+        {
+          id: 'cg1',
+          type: 'capitalGains' as const,
+          amount: 1_500_000_000,
+          shareType: 'listed' as const,
+          account: 'domesticNoWithholding' as const,
+        },
+      ],
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+    };
+
+    const results = calculateTaxes(minTaxInputs);
+    const limit = results.furusatoNozei.limit;
+    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const withDonationOnly = calculateTaxes({ ...minTaxInputs, furusatoDonation: limit });
+    const withDonationAndTemp = calculateTaxes({
+      ...minTaxInputs,
+      furusatoDonation: limit,
+      temporaryIncome: benefit.estimatedEconomicBenefit,
     });
 
-    const estimate = estimateFurusatoTemporaryIncome(results);
-
-    expect(estimate.estimatedResidenceTax).toBe(0);
-    expect(estimate.estimatedTotalTax).toBe(estimate.estimatedNationalIncomeTax);
+    expect(results.highIncomeMinimumTax).toBeDefined();
+    expect(results.furusatoNozei.temporaryIncomeTax).toEqual({
+      nationalIncomeTax: withDonationAndTemp.nationalIncomeTax - withDonationOnly.nationalIncomeTax,
+      residenceTax:
+        withDonationAndTemp.residenceTax.totalResidenceTax -
+        withDonationOnly.residenceTax.totalResidenceTax,
+      total:
+        withDonationAndTemp.nationalIncomeTax -
+        withDonationOnly.nationalIncomeTax +
+        (withDonationAndTemp.residenceTax.totalResidenceTax -
+          withDonationOnly.residenceTax.totalResidenceTax),
+    });
   });
 });

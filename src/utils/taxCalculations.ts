@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
+import { TEMPORARY_INCOME_SPECIAL_DEDUCTION } from '../data/furusatoNozei';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import {
   NATIONAL_INCOME_TAX_BRACKETS,
@@ -54,6 +55,7 @@ import {
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
 import { calculateForeignTaxCredit } from './foreignTaxCredit';
+import { estimateFurusatoEconomicBenefit } from './furusatoNozei';
 import {
   calculateHealthInsuranceBreakdown,
   calculateHouseholdNHIBreakdown,
@@ -928,6 +930,7 @@ const composeTaxpayerNetIncomeComponents = (
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
+  temporaryIncome: number = 0,
 ): NetIncomeComponents => {
   const {
     grossEmploymentIncome,
@@ -950,6 +953,7 @@ const composeTaxpayerNetIncomeComponents = (
     aggregateDividendIncome: breakdown.aggregateDividends,
     aggregateInterestIncome: breakdown.aggregateInterest,
     separateNetIncome: breakdown.separateBase.netIncome,
+    grossTemporaryIncome: Math.max(0, temporaryIncome || 0),
     year,
   });
 };
@@ -1062,6 +1066,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     inputs.ageRange,
     inputs.dependents,
     inputs.personalCircumstances,
+    inputs.temporaryIncome,
   );
 
   let healthInsurance = 0;
@@ -1560,6 +1565,31 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       );
       const outOfPocketCost = furusatoLimit.finalLimit - incomeTaxReduction - residenceTaxReduction;
 
+      const benefit = estimateFurusatoEconomicBenefit(furusatoLimit.finalLimit);
+      let temporaryIncomeTax: FurusatoNozeiDetails['temporaryIncomeTax'];
+      if (benefit.estimatedEconomicBenefit > TEMPORARY_INCOME_SPECIAL_DEDUCTION) {
+        const withFurusatoAndTempIncome = calculateTaxes({
+          ...inputs,
+          furusatoDonation: furusatoLimit.finalLimit,
+          temporaryIncome:
+            Math.max(0, inputs.temporaryIncome || 0) + benefit.estimatedEconomicBenefit,
+        });
+        const nationalIncomeTaxIncrease = Math.max(
+          0,
+          withFurusatoAndTempIncome.nationalIncomeTax - withFurusato.nationalIncomeTax,
+        );
+        const residenceTaxIncrease = Math.max(
+          0,
+          withFurusatoAndTempIncome.residenceTax.totalResidenceTax -
+            withFurusato.residenceTax.totalResidenceTax,
+        );
+        temporaryIncomeTax = {
+          nationalIncomeTax: nationalIncomeTaxIncrease,
+          residenceTax: residenceTaxIncrease,
+          total: nationalIncomeTaxIncrease + residenceTaxIncrease,
+        };
+      }
+
       furusatoNozei = {
         limit: furusatoLimit.finalLimit,
         incomeTaxReduction,
@@ -1567,6 +1597,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxSpecialDeduction: furusatoLimit.residenceTaxSpecialDeduction,
         residenceTaxReduction,
         outOfPocketCost,
+        ...(temporaryIncomeTax && { temporaryIncomeTax }),
       };
     }
   }

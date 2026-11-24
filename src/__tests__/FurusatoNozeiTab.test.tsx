@@ -290,14 +290,18 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
     expect(within(details).getByText('¥0')).toBeInTheDocument();
   });
 
-  it('auto-expands above ¥500,000, calculates estimated tax, and reduces Net Estimated Benefit', () => {
+  it('starts collapsed above ¥500,000, shows warning tooltip icon without double icon, and deducts engine tax', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
-      taxableIncomeForNationalIncomeTax: 45_000_000,
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 2_200_000,
         incomeTaxReduction: 1_009_900,
         residenceTaxReduction: 1_188_100,
         outOfPocketCost: 2_000,
+        temporaryIncomeTax: {
+          nationalIncomeTax: 47_800,
+          residenceTax: 10_400,
+          total: 58_200,
+        },
       }),
     });
 
@@ -306,16 +310,27 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
     const toggleButton = screen.getByRole('button', {
       name: /Temporary Income Estimate \(一時所得\)/,
     });
-    expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
     expect(
       screen.getByText('Exceeds ¥500,000 deduction (assuming no other temporary income)'),
     ).toBeInTheDocument();
+    expect(screen.queryByText('Estimated shipping (5.7%)')).not.toBeInTheDocument();
 
-    // Effective Return Analysis deducts the estimated temporary income tax (¥58,294)
-    expect(screen.getByText('Estimated Tax on Temporary Income')).toBeInTheDocument();
-    expect(screen.getByText('≈ -¥58,294')).toBeInTheDocument();
-    // ¥583,000 goods - ¥2,000 out-of-pocket - ¥58,294 tax = ¥522,706
-    expect(screen.getByText('≈ ¥522,706')).toBeInTheDocument();
+    // Tooltip trigger uses the amber warning icon directly (no separate info icon beside it)
+    expect(screen.getByLabelText('Taxable temporary income warning')).toBeInTheDocument();
+    expect(
+      within(toggleButton.parentElement!).queryByTestId('HelpOutlineIcon'),
+    ).not.toBeInTheDocument();
+
+    // Effective Return Analysis deducts the engine-computed temporary income tax (¥58,200)
+    expect(screen.getByText('Tax on Temporary Income*')).toBeInTheDocument();
+    expect(screen.getByText('≈ -¥58,200')).toBeInTheDocument();
+    // ¥583,000 goods - ¥2,000 out-of-pocket - ¥58,200 tax = ¥522,800
+    expect(screen.getByText('≈ ¥522,800')).toBeInTheDocument();
+
+    // Clicking expands the breakdown
+    fireEvent.click(toggleButton);
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
 
     const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
     expect(within(details).getByText('≈ ¥583,000')).toBeInTheDocument();
@@ -323,7 +338,10 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
     expect(within(details).getByText('-¥500,000')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥208,400')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥104,200')).toBeInTheDocument();
-    expect(within(details).getByText('≈ ¥58,294')).toBeInTheDocument();
+    expect(within(details).getByText('¥58,200')).toBeInTheDocument();
+    expect(
+      within(details).getByText('Income tax ¥47,800 + Residence tax ¥10,400'),
+    ).toBeInTheDocument();
 
     // Official legal and statistical source links are present in the tooltip
     expect(screen.getByRole('link', { name: /令和4年2月7日裁決/ })).toHaveAttribute(
@@ -342,9 +360,5 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
       'href',
       FURUSATO_SOURCES.micFy2025Pdf,
     );
-
-    // User can manually collapse the auto-expanded section
-    fireEvent.click(toggleButton);
-    expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
   });
 });

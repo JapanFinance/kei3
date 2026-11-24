@@ -7,12 +7,7 @@ import {
   TEMPORARY_INCOME_INCLUSION_DIVISOR,
   TEMPORARY_INCOME_SPECIAL_DEDUCTION,
 } from '../data/furusatoNozei';
-import {
-  NATIONAL_INCOME_TAX_BRACKETS,
-  RECONSTRUCTION_SURTAX_RATE,
-} from '../data/nationalIncomeTaxBrackets';
-import { percentTo } from '../data/rate';
-import type { FurusatoNozeiDetails, TakeHomeResults } from '../types/tax';
+import type { FurusatoNozeiDetails } from '../types/tax';
 
 // The nominal out-of-pocket cost at the limit is 2,000 yen. The residence tax
 // credits are floored to 100 yen separately for the municipal and prefectural
@@ -20,10 +15,6 @@ import type { FurusatoNozeiDetails, TakeHomeResults } from '../types/tax';
 // figure; only a cost above that margin means the bracket shift described on
 // the Furusato Nozei tab has actually raised the cost.
 const OUT_OF_POCKET_WARNING_THRESHOLD = 2200;
-
-// Local 10% aggregate residence tax (所得割: 6% municipal + 4% prefectural), kept
-// here to avoid importing residenceTax.ts (which interacts with taxCalculations.ts).
-const RESIDENCE_TAX_RATE = percentTo(1)(10);
 
 export const hasHighOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): boolean =>
   furusatoNozei.outOfPocketCost > OUT_OF_POCKET_WARNING_THRESHOLD;
@@ -48,14 +39,12 @@ export interface FurusatoTemporaryIncomeEstimate extends FurusatoEconomicBenefit
   taxableTemporaryIncome: number;
   /** Whether estimated economic benefit alone exceeds the ¥500,000 special deduction. */
   isTaxable: boolean;
-  /** Estimated incremental national income tax + 2.1% reconstruction surtax. */
-  estimatedNationalIncomeTax: number;
-  /** Estimated incremental residence tax (10% 所得割, or 0 if exempt). */
-  estimatedResidenceTax: number;
-  /** Total estimated additional tax (national + residence). */
-  estimatedTotalTax: number;
-  /** True when the High-Income Minimum Tax floor governs the marginal national tax rate. */
-  usesMinimumTaxRate: boolean;
+  /** Engine-computed incremental national income tax + reconstruction surtax (0 when not taxable). */
+  additionalNationalIncomeTax: number;
+  /** Engine-computed incremental residence tax (0 when not taxable). */
+  additionalResidenceTax: number;
+  /** Total engine-computed additional tax (`additionalNationalIncomeTax + additionalResidenceTax`). */
+  additionalTotalTax: number;
 }
 
 /**
@@ -91,26 +80,14 @@ export const hasTaxableFurusatoTemporaryIncome = (furusatoNozei: FurusatoNozeiDe
   estimateFurusatoEconomicBenefit(furusatoNozei.limit).estimatedEconomicBenefit >
     TEMPORARY_INCOME_SPECIAL_DEDUCTION;
 
-const nationalIncomeTaxBaseFor = (taxableIncome: number): number => {
-  const clamped = Math.max(0, taxableIncome);
-
-  for (const bracket of NATIONAL_INCOME_TAX_BRACKETS) {
-    if (clamped <= bracket.maxTaxableIncomeInclusive) {
-      return bracket.rate.taxOn(clamped) - bracket.deduction;
-    }
-  }
-
-  return 0;
-};
-
 /**
- * Estimates temporary income (一時所得) and marginal additional tax arising from Furusato Nozei
- * return gifts (including shipping) when donating at the calculated limit.
+ * Summarizes the temporary income (一時所得) estimate and reads the engine-computed incremental
+ * tax from {@link FurusatoNozeiDetails.temporaryIncomeTax}.
  */
 export const estimateFurusatoTemporaryIncome = (
-  results: TakeHomeResults,
+  furusatoNozei: FurusatoNozeiDetails,
 ): FurusatoTemporaryIncomeEstimate => {
-  const benefit = estimateFurusatoEconomicBenefit(results.furusatoNozei.limit);
+  const benefit = estimateFurusatoEconomicBenefit(furusatoNozei.limit);
   const specialDeduction = TEMPORARY_INCOME_SPECIAL_DEDUCTION;
   const remainingDeductionAllowance = Math.max(
     0,
@@ -121,52 +98,7 @@ export const estimateFurusatoTemporaryIncome = (
     netTemporaryIncome / TEMPORARY_INCOME_INCLUSION_DIVISOR,
   );
   const isTaxable = benefit.estimatedEconomicBenefit > specialDeduction;
-
-  if (taxableTemporaryIncome <= 0) {
-    return {
-      ...benefit,
-      specialDeduction,
-      remainingDeductionAllowance,
-      netTemporaryIncome,
-      taxableTemporaryIncome: 0,
-      isTaxable,
-      estimatedNationalIncomeTax: 0,
-      estimatedResidenceTax: 0,
-      estimatedTotalTax: 0,
-      usesMinimumTaxRate: false,
-    };
-  }
-
-  const baseTaxable = Math.max(0, results.taxableIncomeForNationalIncomeTax ?? 0);
-  const standardBaseDelta =
-    nationalIncomeTaxBaseFor(baseTaxable + taxableTemporaryIncome) -
-    nationalIncomeTaxBaseFor(baseTaxable);
-
-  let nationalBaseDelta = standardBaseDelta;
-  let usesMinimumTaxRate = false;
-
-  if (results.highIncomeMinimumTax) {
-    // Raising 総所得金額 by taxableTemporaryIncome raises 基準所得金額 by the same amount,
-    // lifting the minimum-tax target while standard baseline income tax (incl. surtax) offsets it.
-    const minTaxFloorDelta = results.highIncomeMinimumTax.rate.taxOn(taxableTemporaryIncome);
-    const standardBaselineTaxDelta =
-      standardBaseDelta + RECONSTRUCTION_SURTAX_RATE.taxOn(standardBaseDelta);
-    const newAdditional = Math.max(
-      0,
-      results.highIncomeMinimumTax.additionalIncomeTax +
-        minTaxFloorDelta -
-        standardBaselineTaxDelta,
-    );
-    nationalBaseDelta =
-      standardBaseDelta + (newAdditional - results.highIncomeMinimumTax.additionalIncomeTax);
-    usesMinimumTaxRate = newAdditional > 0;
-  }
-
-  const surtaxDelta = RECONSTRUCTION_SURTAX_RATE.taxOn(nationalBaseDelta);
-  const estimatedNationalIncomeTax = nationalBaseDelta + surtaxDelta;
-  const estimatedResidenceTax = results.residenceTax.nonTaxableStatus
-    ? 0
-    : RESIDENCE_TAX_RATE.taxOn(taxableTemporaryIncome);
+  const temporaryIncomeTax = furusatoNozei.temporaryIncomeTax;
 
   return {
     ...benefit,
@@ -175,9 +107,8 @@ export const estimateFurusatoTemporaryIncome = (
     netTemporaryIncome,
     taxableTemporaryIncome,
     isTaxable,
-    estimatedNationalIncomeTax,
-    estimatedResidenceTax,
-    estimatedTotalTax: estimatedNationalIncomeTax + estimatedResidenceTax,
-    usesMinimumTaxRate,
+    additionalNationalIncomeTax: temporaryIncomeTax?.nationalIncomeTax ?? 0,
+    additionalResidenceTax: temporaryIncomeTax?.residenceTax ?? 0,
+    additionalTotalTax: temporaryIncomeTax?.total ?? 0,
   };
 };
