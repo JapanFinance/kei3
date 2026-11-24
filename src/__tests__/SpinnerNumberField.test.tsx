@@ -171,6 +171,34 @@ describe('SpinnerNumberField', () => {
     expect(input).toHaveAttribute('inputmode', 'numeric');
   });
 
+  it('uses inputMode="decimal" when decimalScale allows decimals', () => {
+    const mockOnChange = vi.fn();
+
+    render(<SpinnerNumberField value={0} onChange={mockOnChange} label="Rate" decimalScale={3} />);
+
+    const input = screen.getByLabelText('Rate');
+
+    expect(input).toHaveAttribute('inputmode', 'decimal');
+  });
+
+  it('lets inputProps override the default inputMode', () => {
+    const mockOnChange = vi.fn();
+
+    render(
+      <SpinnerNumberField
+        value={0}
+        onChange={mockOnChange}
+        label="Rate"
+        decimalScale={3}
+        inputProps={{ inputMode: 'numeric' }}
+      />,
+    );
+
+    const input = screen.getByLabelText('Rate');
+
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
   it('drops the decimal places of an amount', () => {
     const mockOnChange = vi.fn();
 
