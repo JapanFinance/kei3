@@ -586,6 +586,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     [comparisonIncome, distribution, isChartDisabled],
   );
 
+  const comparisonBasisLabel =
+    comparisonBasis === 'household' ? 'Household income' : 'Individual income';
+  const chartAriaLabel = manualSocialInsuranceEntry
+    ? 'Take-home pay chart. Comparative data across other income levels is unavailable when using manual social insurance entry.'
+    : `Take-home pay breakdown chart from ${formatJPY(chartRange.min)} to ${formatJPY(chartRange.max)}. ${comparisonBasisLabel}: ${formatJPY(comparisonIncome)}, median income: ${formatJPY(distribution.median)}.`;
+
   return (
     <Paper
       elevation={0}
@@ -655,6 +661,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             <Chart
               ref={chartRef}
               type="bar"
+              role="img"
+              aria-label={chartAriaLabel}
               data={chartData}
               options={chartOptions}
               style={{ height: '100%', width: '100%' }}

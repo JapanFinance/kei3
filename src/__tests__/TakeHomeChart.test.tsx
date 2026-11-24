@@ -13,6 +13,7 @@ import { theme } from '../theme';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { DEFAULT_TAXPAYER_AGE_RANGE } from '../types/taxpayerAge';
+import { formatJPY } from '../utils/formatters';
 import { estimateIncomePercentile } from '../utils/incomeDistribution';
 import { makeDependent, makeSpouse } from './fixtures/dependents';
 
@@ -20,17 +21,23 @@ vi.mock('react-chartjs-2', () => ({
   Chart: ({
     data,
     options,
+    role,
+    'aria-label': ariaLabel,
   }: {
     data?: { datasets?: { label?: string; borderColor?: string }[] };
     options?: {
       animation?: false | object;
       plugins?: { customPlugin?: { data?: { currentIncome?: number } } };
     };
+    role?: string;
+    'aria-label'?: string;
   }) => {
     const health = data?.datasets?.find(d => d.label === 'Health Insurance');
     return (
       <div
         data-testid="chart-canvas"
+        role={role}
+        aria-label={ariaLabel}
         data-border-color={health?.borderColor}
         data-current-income={options?.plugins?.customPlugin?.data?.currentIncome}
         data-animation={
@@ -352,5 +359,48 @@ describe('TakeHomeChart', () => {
     render(<TakeHomeChart {...baseProps} />);
 
     expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-animation', 'false');
+  });
+
+  it('exposes an accessible img role and summary label on the chart canvas', () => {
+    const expectedMedian = formatJPY(HOUSEHOLD_INCOME_DISTRIBUTIONS.all.median);
+    const spouse = makeSpouse({
+      isSameHousehold: true,
+      isClaimedAsDependent: false,
+      income: {
+        grossEmploymentIncome: 4_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    });
+
+    const { rerender } = render(<TakeHomeChart {...baseProps} />);
+
+    expect(
+      screen.getByRole('img', {
+        name: new RegExp(
+          `Take-home pay breakdown chart from ¥0 to .*Individual income: ¥5,000,000, median income: ${expectedMedian}`,
+        ),
+      }),
+    ).toBeInTheDocument();
+
+    rerender(<TakeHomeChart {...baseProps} dependents={[spouse]} />);
+
+    expect(
+      screen.getByRole('img', {
+        name: new RegExp(
+          `Take-home pay breakdown chart from ¥0 to .*Household income: ¥9,000,000, median income: ${expectedMedian}`,
+        ),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('describes unavailable comparative data in the chart label for manual social insurance entry', () => {
+    render(<TakeHomeChart {...baseProps} manualSocialInsuranceEntry />);
+
+    expect(
+      screen.getByRole('img', {
+        name: /comparative data across other income levels is unavailable/i,
+      }),
+    ).toBeInTheDocument();
   });
 });
