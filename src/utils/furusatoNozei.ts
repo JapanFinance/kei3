@@ -14,12 +14,35 @@ import type { FurusatoNozeiDetails, TakeHomeResults } from '../types/tax';
 // The nominal out-of-pocket cost at the limit is 2,000 yen. The residence tax
 // credits are floored to 100 yen separately for the municipal and prefectural
 // portions, so an ordinary result lands up to about 200 yen above the nominal
-// figure; only a cost above that margin means the bracket shift described on
-// the Furusato Nozei tab has actually raised the cost.
+// figure; only a cost above that margin means the bracket shift, credit interaction,
+// or temporary income tax on the Furusato Nozei tab has actually raised the cost.
 const OUT_OF_POCKET_WARNING_THRESHOLD = 2200;
 
+/**
+ * Out-of-pocket cost from the donation and its tax reductions alone, excluding any
+ * temporary income tax on return gifts.
+ */
+export const getFurusatoDonationOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): number =>
+  furusatoNozei.limit - furusatoNozei.incomeTaxReduction - furusatoNozei.residenceTaxReduction;
+
+/**
+ * Total estimated out-of-pocket cost: donation amount minus income/residence tax
+ * reductions, plus any incremental income and residence tax on temporary income from
+ * return gifts.
+ */
+export const getFurusatoOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): number =>
+  getFurusatoDonationOutOfPocketCost(furusatoNozei) +
+  (furusatoNozei.temporaryIncomeTax?.total ?? 0);
+
+/**
+ * Returns true when the base donation out-of-pocket cost (before temporary income tax)
+ * exceeds the nominal ¥2,200 rounding margin.
+ */
+export const hasHighDonationOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): boolean =>
+  getFurusatoDonationOutOfPocketCost(furusatoNozei) > OUT_OF_POCKET_WARNING_THRESHOLD;
+
 export const hasHighOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): boolean =>
-  furusatoNozei.outOfPocketCost > OUT_OF_POCKET_WARNING_THRESHOLD;
+  getFurusatoOutOfPocketCost(furusatoNozei) > OUT_OF_POCKET_WARNING_THRESHOLD;
 
 export interface FurusatoEconomicBenefitEstimate {
   /** Estimated procurement value of return gifts (26.5% of donation limit). */

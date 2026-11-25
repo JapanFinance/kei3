@@ -39,7 +39,6 @@ export const makeFurusatoNozeiDetails = (
   incomeTaxReduction: 0,
   residenceTaxDonationBasicDeduction: 0,
   residenceTaxSpecialDeduction: 0,
-  outOfPocketCost: 0,
   residenceTaxReduction: 0,
   ...overrides,
 });

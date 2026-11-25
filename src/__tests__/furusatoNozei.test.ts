@@ -8,7 +8,11 @@ import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types
 import {
   estimateFurusatoEconomicBenefit,
   estimateFurusatoTemporaryIncome,
+  getFurusatoDonationOutOfPocketCost,
+  getFurusatoOutOfPocketCost,
   getOneStopIneligibilityReasons,
+  hasHighDonationOutOfPocketCost,
+  hasHighOutOfPocketCost,
   hasTaxableFurusatoTemporaryIncome,
 } from '../utils/furusatoNozei';
 import { calculateTaxes } from '../utils/taxCalculations';
@@ -67,9 +71,47 @@ describe('hasTaxableFurusatoTemporaryIncome', () => {
   });
 });
 
+describe('Furusato out-of-pocket cost helpers', () => {
+  it('computes donation-only and total out-of-pocket cost with temporary income tax', () => {
+    const furusatoNozei = makeFurusatoNozeiDetails({
+      limit: 2_101_000,
+      incomeTaxReduction: 964_300,
+      residenceTaxReduction: 1_134_600,
+      temporaryIncomeTax: { nationalIncomeTax: 40_400, residenceTax: 8_800, total: 49_200 },
+    });
+
+    expect(getFurusatoDonationOutOfPocketCost(furusatoNozei)).toBe(2_100);
+    expect(getFurusatoOutOfPocketCost(furusatoNozei)).toBe(51_300);
+    expect(hasHighDonationOutOfPocketCost(furusatoNozei)).toBe(false);
+    expect(hasHighOutOfPocketCost(furusatoNozei)).toBe(true);
+  });
+
+  it('flags nominal vs high donation out-of-pocket costs at the ¥2,200 margin', () => {
+    const nominal = makeFurusatoNozeiDetails({
+      limit: 77_000,
+      incomeTaxReduction: 7_600,
+      residenceTaxReduction: 67_300,
+    });
+    const highDonation = makeFurusatoNozeiDetails({
+      limit: 98_000,
+      incomeTaxReduction: 9_800,
+      residenceTaxReduction: 76_400,
+    });
+
+    expect(hasHighDonationOutOfPocketCost(nominal)).toBe(false);
+    expect(hasHighOutOfPocketCost(nominal)).toBe(false);
+    expect(hasHighDonationOutOfPocketCost(highDonation)).toBe(true);
+    expect(hasHighOutOfPocketCost(highDonation)).toBe(true);
+  });
+});
+
 describe('estimateFurusatoTemporaryIncome', () => {
   it('leaves taxable temporary income and additional tax at zero below ¥500,000', () => {
-    const furusatoNozei = makeFurusatoNozeiDetails({ limit: 60_000, outOfPocketCost: 2_000 });
+    const furusatoNozei = makeFurusatoNozeiDetails({
+      limit: 60_000,
+      incomeTaxReduction: 5_800,
+      residenceTaxReduction: 52_200,
+    });
 
     const estimate = estimateFurusatoTemporaryIncome(furusatoNozei);
 
@@ -85,7 +127,8 @@ describe('estimateFurusatoTemporaryIncome', () => {
   it('floors ½ taxable temporary income to whole yen and surfaces engine tax breakdown', () => {
     const furusatoNozei = makeFurusatoNozeiDetails({
       limit: 1_553_005,
-      outOfPocketCost: 2_000,
+      incomeTaxReduction: 633_000,
+      residenceTaxReduction: 918_005,
       temporaryIncomeTax: { nationalIncomeTax: 100, residenceTax: 0, total: 100 },
     });
 
@@ -227,7 +270,11 @@ describe('getOneStopIneligibilityReasons', () => {
   it('returns empty array for an ordinary salary earner with non-taxable gift benefit', () => {
     const results = makeTakeHomeResults({
       grossEmploymentIncome: 6_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 60_000, outOfPocketCost: 2_000 }),
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 60_000,
+        incomeTaxReduction: 5_800,
+        residenceTaxReduction: 52_200,
+      }),
     });
 
     expect(getOneStopIneligibilityReasons(results)).toEqual([]);
@@ -236,7 +283,11 @@ describe('getOneStopIneligibilityReasons', () => {
   it('detects taxable temporary income and salary over ¥20,000,000', () => {
     const results = makeTakeHomeResults({
       grossEmploymentIncome: 44_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({ limit: 1_830_000, outOfPocketCost: 81_200 }),
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 1_830_000,
+        incomeTaxReduction: 760_600,
+        residenceTaxReduction: 988_200,
+      }),
     });
 
     expect(getOneStopIneligibilityReasons(results)).toEqual([

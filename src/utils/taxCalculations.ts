@@ -1563,7 +1563,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         0,
         residenceTax.totalResidenceTax - withFurusato.residenceTax.totalResidenceTax,
       );
-      const outOfPocketCost = furusatoLimit.finalLimit - incomeTaxReduction - residenceTaxReduction;
 
       const benefit = estimateFurusatoEconomicBenefit(furusatoLimit.finalLimit);
       let temporaryIncomeTax: FurusatoNozeiDetails['temporaryIncomeTax'];
@@ -1596,7 +1595,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxDonationBasicDeduction: furusatoLimit.residenceTaxDonationBasicDeduction,
         residenceTaxSpecialDeduction: furusatoLimit.residenceTaxSpecialDeduction,
         residenceTaxReduction,
-        outOfPocketCost,
         ...(temporaryIncomeTax && { temporaryIncomeTax }),
       };
     }

@@ -5,13 +5,13 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Collapse from '@mui/material/Collapse';
-import { alpha, useTheme } from '@mui/material/styles';
+import Divider from '@mui/material/Divider';
+import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useState } from 'react';
 
 import {
-  FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE,
   FURUSATO_AVERAGE_GIFT_COST_RATE,
   FURUSATO_AVERAGE_SHIPPING_COST_RATE,
   FURUSATO_SOURCES,
@@ -20,11 +20,15 @@ import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import {
   estimateFurusatoTemporaryIncome,
+  getFurusatoDonationOutOfPocketCost,
+  getFurusatoOutOfPocketCost,
   getOneStopIneligibilityReasons,
+  hasHighDonationOutOfPocketCost,
   hasHighOutOfPocketCost,
   type OneStopIneligibilityReason,
 } from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import { FurusatoTemporaryIncomeTooltip } from './FurusatoTemporaryIncomeTooltip';
@@ -33,6 +37,7 @@ interface FurusatoNozeiTabProps {
   results: TakeHomeResults;
 }
 
+const RESIDENCE_TAX_DETAILS_ID = 'furusato-residence-tax-details';
 const TEMPORARY_INCOME_DETAILS_ID = 'furusato-temporary-income-details';
 
 const ONE_STOP_INELIGIBILITY_LABELS: Record<OneStopIneligibilityReason, string> = {
@@ -45,12 +50,15 @@ const ONE_STOP_INELIGIBILITY_LABELS: Record<OneStopIneligibilityReason, string> 
   medicalExpensesDeduction: 'medical expenses deduction',
 };
 
+/** Formats a tax reduction as a negative amount, keeping zero as ¥0 rather than -¥0. */
+const formatReduction = (amount: number): string => formatJPY(amount > 0 ? -amount : 0);
+
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const tempIncome = estimateFurusatoTemporaryIncome(results.furusatoNozei);
+  const [showResidenceTaxDetails, setShowResidenceTaxDetails] = useState(false);
   const [showTemporaryIncomeDetails, setShowTemporaryIncomeDetails] = useState(false);
-  const handleToggleTemporaryIncome = () => setShowTemporaryIncomeDetails(open => !open);
 
   // If no Furusato Nozei data, show a message
   if (results.furusatoNozei.limit <= 0) {
@@ -69,11 +77,24 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
 
   const goodsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
   const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
-  const combinedPct = FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE.toPercent(1);
-  const netEstimatedBenefit =
-    tempIncome.estimatedGoodsValue -
-    results.furusatoNozei.outOfPocketCost -
-    tempIncome.additionalTotalTax;
+  const donationOutOfPocketCost = getFurusatoDonationOutOfPocketCost(results.furusatoNozei);
+  const totalOutOfPocketCost = getFurusatoOutOfPocketCost(results.furusatoNozei);
+  const hasTemporaryIncomeTax = tempIncome.additionalTotalTax > 0;
+  const hasHighDonationCost = hasHighDonationOutOfPocketCost(results.furusatoNozei);
+  const hasHighTotalOutOfPocket = hasHighOutOfPocketCost(results.furusatoNozei);
+  const netEstimatedBenefit = tempIncome.estimatedGoodsValue - totalOutOfPocketCost;
+  const netBenefitTone = netEstimatedBenefit < 0 ? ('warning' as const) : ('success' as const);
+
+  const residenceTaxCreditBase =
+    results.furusatoNozei.residenceTaxDonationBasicDeduction +
+    results.furusatoNozei.residenceTaxSpecialDeduction;
+  const municipalTaxCredit = Math.round(
+    residenceTaxCreditBase * results.residenceTax.cityProportion.toDecimal(),
+  );
+  const prefecturalTaxCredit = Math.round(
+    residenceTaxCreditBase * results.residenceTax.prefecturalProportion.toDecimal(),
+  );
+
   const foreignTaxCredit = results.foreignTaxCredit?.credit;
   const hasForeignTaxCredit =
     foreignTaxCredit !== undefined &&
@@ -88,19 +109,14 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
     .join('; ');
   const oneStopIneligibleNotice =
     oneStopIneligibilityReasons.length > 0 ? (
-      <>
-        <Typography variant="body2" sx={{ mt: 1 }}>
-          The One-Stop system (ワンストップ特例制度) cannot be used to avoid this here because
-          filing a tax return is required ({oneStopReasonsText}).
-        </Typography>
-        {tempIncome.isTaxable && (
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            Tax on temporary income from return gifts is shown separately under Effective Return
-            Analysis and is not included in the out-of-pocket cost above.
-          </Typography>
-        )}
-      </>
+      <Typography variant="body2" sx={{ mt: 1 }}>
+        The One-Stop system (ワンストップ特例制度) cannot be used to avoid this here because filing
+        a tax return is required ({oneStopReasonsText}).
+      </Typography>
     ) : null;
+
+  const formattedOutOfPocketTotal = `${hasTemporaryIncomeTax ? '≈ ' : ''}${formatJPY(totalOutOfPocketCost)}`;
+  const formattedOutOfPocketDeduction = `${hasTemporaryIncomeTax ? '≈ ' : ''}${formatJPY(-totalOutOfPocketCost)}`;
 
   return (
     <Box>
@@ -120,20 +136,6 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         />
         Furusato Nozei Details
       </Typography>
-
-      {/* <Box sx={{ mb: 1, p: 2, bgcolor: 'info.light', borderRadius: 2, color: 'info.contrastText' }}>
-        <Typography variant="body2">
-          For comprehensive information about Furusato Nozei, see{' '}
-          <a
-            href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit', textDecoration: 'underline' }}
-          >
-            this wiki
-          </a>.
-        </Typography>
-      </Box> */}
 
       {/* Limit */}
       <Box sx={{ mb: 1 }}>
@@ -182,11 +184,17 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         />
       </Box>
 
-      {/* Tax Reductions */}
-      <Box sx={{ mb: 1 }}>
+      {/* Cost Breakdown */}
+      <Box sx={{ mb: 1.5 }}>
         <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-          Tax Reductions (at limit)
+          Cost Breakdown (at limit)
         </Typography>
+
+        <ResultRow
+          label="Donation Amount"
+          value={formatJPY(results.furusatoNozei.limit)}
+          type="indented"
+        />
 
         <ResultRow
           label={
@@ -216,6 +224,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                     <a
                       href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/"
                       target="_blank"
+                      rel="noopener noreferrer"
                       style={{
                         color: 'var(--mui-palette-primary-main)',
                         textDecoration: 'underline',
@@ -229,82 +238,187 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               </DetailedTooltip>
             </span>
           }
-          value={formatJPY(results.furusatoNozei.incomeTaxReduction)}
+          value={formatReduction(results.furusatoNozei.incomeTaxReduction)}
           type="indented"
         />
+
+        <ResultRow
+          label="Residence Tax Reduction"
+          disclosure={{
+            expanded: showResidenceTaxDetails,
+            onToggle: () => setShowResidenceTaxDetails(open => !open),
+            controlsId: RESIDENCE_TAX_DETAILS_ID,
+          }}
+          labelSuffix={
+            <DetailedTooltip title="Residence Tax Reduction" icon={SIMPLE_TOOLTIP_ICON}>
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  Tax Credits vs. Realized Reduction
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  The total tax credits shown on the residence tax notice may differ slightly from
+                  the effective tax reduction due to rounding in the calculation process.
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Basic Deduction (基本控除):</strong>{' '}
+                  {formatJPY(results.furusatoNozei.residenceTaxDonationBasicDeduction)} (10% of
+                  donation amount minus 2,000 yen)
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Special Deduction (特例控除):</strong>{' '}
+                  {formatJPY(results.furusatoNozei.residenceTaxSpecialDeduction)} (remaining amount
+                  to keep out-of-pocket cost at 2,000 yen, up to a limit)
+                </Typography>
+                <Typography variant="body2">
+                  The residence tax reduction is calculated as the difference in residence tax with
+                  and without the above tax credits.
+                </Typography>
+              </Box>
+            </DetailedTooltip>
+          }
+          value={formatReduction(results.furusatoNozei.residenceTaxReduction)}
+          type="indented"
+        />
+
+        <Box id={RESIDENCE_TAX_DETAILS_ID}>
+          <Collapse in={showResidenceTaxDetails} unmountOnExit>
+            <ResultRow
+              label="Municipal tax credit"
+              value={formatReduction(municipalTaxCredit)}
+              type="detail"
+            />
+            <ResultRow
+              label="Prefectural tax credit"
+              value={formatReduction(prefecturalTaxCredit)}
+              type="detail"
+            />
+          </Collapse>
+        </Box>
 
         <ResultRow
           label={
-            <span>
-              Residence Tax Reduction
-              <DetailedTooltip title="Residence Tax Reduction" icon={SIMPLE_TOOLTIP_ICON}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Tax Credits vs. Realized Reduction
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    The total tax credits shown on the residence tax notice may differ slightly from
-                    the effective tax reduction due to rounding in the calculation process.
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Basic Deduction (基本控除):</strong>{' '}
-                    {formatJPY(results.furusatoNozei.residenceTaxDonationBasicDeduction)} (10% of
-                    donation amount minus 2,000 yen)
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Special Deduction (特例控除):</strong>{' '}
-                    {formatJPY(results.furusatoNozei.residenceTaxSpecialDeduction)} (remaining
-                    amount to keep out-of-pocket cost at 2,000 yen, up to a limit)
-                  </Typography>
-                  <Typography variant="body2">
-                    The residence tax reduction is calculated as the difference in residence tax
-                    with and without the above tax credits.
-                  </Typography>
-                </Box>
-              </DetailedTooltip>
-            </span>
+            tempIncome.isTaxable ? (
+              <Box component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                Tax on Temporary Income
+              </Box>
+            ) : (
+              'Tax on Temporary Income'
+            )
           }
-          value={formatJPY(results.furusatoNozei.residenceTaxReduction)}
+          sublabel={
+            tempIncome.isTaxable
+              ? `Exceeds ¥500,000 deduction (≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)} est. benefit)`
+              : `Under ¥500,000 deduction (≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)} est. benefit)`
+          }
+          disclosure={{
+            expanded: showTemporaryIncomeDetails,
+            onToggle: () => setShowTemporaryIncomeDetails(open => !open),
+            controlsId: TEMPORARY_INCOME_DETAILS_ID,
+          }}
+          labelSuffix={<FurusatoTemporaryIncomeTooltip estimate={tempIncome} />}
+          value={
+            tempIncome.isTaxable ? (
+              <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
+                ≈ {formatJPY(tempIncome.additionalTotalTax)}
+              </Box>
+            ) : (
+              formatJPY(0)
+            )
+          }
           type="indented"
         />
 
-        {/* Municipal and Prefectural breakdown */}
-        <ResultRow
-          label="Municipal tax credit"
-          value={formatJPY(
-            Math.round(
-              (results.furusatoNozei.residenceTaxDonationBasicDeduction +
-                results.furusatoNozei.residenceTaxSpecialDeduction) *
-                results.residenceTax.cityProportion.toDecimal(),
-            ),
-          )}
-          type="detail"
-        />
+        <Box id={TEMPORARY_INCOME_DETAILS_ID}>
+          <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
+            <ResultRow
+              label={`Goods received (${goodsPct})`}
+              value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
+              type="detail"
+            />
+            <ResultRow
+              label={`Estimated shipping (${shippingPct})`}
+              value={`≈ ${formatJPY(tempIncome.estimatedShippingCost)}`}
+              type="detail"
+            />
+            <ResultRow
+              label="Estimated economic benefit"
+              value={`≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)}`}
+              type="detail-subtotal"
+            />
+            <ResultRow
+              label={
+                <span>
+                  Special deduction (特別控除)
+                  <SimpleTooltip>
+                    Annual ¥500,000 deduction shared across all temporary income in the calendar
+                    year.
+                  </SimpleTooltip>
+                </span>
+              }
+              value={formatJPY(-tempIncome.specialDeduction)}
+              type="detail"
+            />
+            {tempIncome.isTaxable ? (
+              <>
+                <ResultRow
+                  label="Net temporary income"
+                  value={`≈ ${formatJPY(tempIncome.netTemporaryIncome)}`}
+                  type="detail"
+                />
+                <ResultRow
+                  label="Taxable temporary income (½)"
+                  value={
+                    <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
+                      ≈ {formatJPY(tempIncome.taxableTemporaryIncome)}
+                    </Box>
+                  }
+                  type="detail-subtotal"
+                />
+                {hasTemporaryIncomeTax && (
+                  <>
+                    <ResultRow
+                      label="Income tax & surtax"
+                      value={formatJPY(tempIncome.additionalNationalIncomeTax)}
+                      type="detail"
+                    />
+                    <ResultRow
+                      label="Residence tax"
+                      value={formatJPY(tempIncome.additionalResidenceTax)}
+                      type="detail"
+                    />
+                  </>
+                )}
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'text.secondary', pl: 3.5, pt: 0.5, display: 'block' }}
+                >
+                  Return gifts (including shipping) count as temporary income in the year delivered.
+                  Assumes no other temporary income; filing a tax return is required when taxable
+                  (One-Stop Exception does not apply).
+                </Typography>
+              </>
+            ) : (
+              <>
+                <ResultRow
+                  label="Remaining deduction allowance"
+                  value={`≈ ${formatJPY(tempIncome.remainingDeductionAllowance)}`}
+                  type="detail"
+                />
+                <ResultRow
+                  label="Taxable temporary income (½)"
+                  value={formatJPY(0)}
+                  type="detail-subtotal"
+                />
+              </>
+            )}
+          </Collapse>
+        </Box>
 
-        <ResultRow
-          label="Prefectural tax credit"
-          value={formatJPY(
-            Math.round(
-              (results.furusatoNozei.residenceTaxDonationBasicDeduction +
-                results.furusatoNozei.residenceTaxSpecialDeduction) *
-                results.residenceTax.prefecturalProportion.toDecimal(),
-            ),
-          )}
-          type="detail"
-        />
-
-        <ResultRow
-          label="Total Tax Reduction"
-          value={formatJPY(
-            results.furusatoNozei.incomeTaxReduction + results.furusatoNozei.residenceTaxReduction,
-          )}
-          type="subtotal"
-        />
         <ResultRow
           label={
             <span>
               Out-of-Pocket Cost
-              {hasHighOutOfPocketCost(results.furusatoNozei) && (
+              {hasHighTotalOutOfPocket && (
                 <DetailedTooltip
                   title="High Out-of-Pocket Cost"
                   icon={<WarningIcon fontSize="small" color="warning" />}
@@ -312,74 +426,107 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   iconAriaLabel="High out-of-pocket cost warning"
                 >
                   <Box>
-                    {hasForeignTaxCredit ? (
-                      results.furusatoNozei.incomeTaxReduction === 0 ? (
-                        <>
-                          <Typography variant="body2">
-                            The out-of-pocket cost is higher than the expected ≈2,000 yen because
-                            the Foreign Tax Credit already reduces Japanese national income tax to
-                            ¥0. As a result, the donation deduction cannot reduce it further.
-                          </Typography>
-                          <Typography variant="body2" sx={{ mt: 1 }}>
-                            Any unused foreign tax credit can be carried forward for up to 3 years.
-                            Note that the One-Stop system (ワンストップ特例制度) cannot be used when
-                            claiming the Foreign Tax Credit, as filing a tax return is required.
-                          </Typography>
-                        </>
-                      ) : (
-                        <>
-                          <Typography variant="body2">
-                            The out-of-pocket cost is higher than the expected ≈2,000 yen. Applying
-                            the donation deduction lowers the Japanese income tax base, which
-                            reduces the allowable Foreign Tax Credit limit.
-                          </Typography>
-                          <Typography variant="body2" sx={{ mt: 1 }}>
-                            Any unused foreign tax credit can be carried forward for up to 3 years.
-                            Note that the One-Stop system (ワンストップ特例制度) cannot be used when
-                            claiming the Foreign Tax Credit, as filing a tax return is required.
-                          </Typography>
-                        </>
-                      )
-                    ) : results.homeLoanTaxCredit &&
-                      results.furusatoNozei.incomeTaxReduction === 0 ? (
+                    {!hasHighDonationCost && hasTemporaryIncomeTax ? (
                       <>
                         <Typography variant="body2">
-                          The out-of-pocket cost is higher than the expected ≈2,000 yen because the
-                          Home Loan Tax Credit already reduces Japanese national income tax to ¥0,
-                          and any spillover into residence tax has reached its statutory cap.
-                        </Typography>
-                        {oneStopIneligibleNotice ?? (
-                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                            If eligible (e.g. year 2+ of mortgage with salary income only), this
-                            issue is avoided by using the One-Stop system (ワンストップ特例制度).
-                          </Typography>
-                        )}
-                      </>
-                    ) : results.highIncomeMinimumTax ? (
-                      <>
-                        <Typography variant="body2">
-                          The out-of-pocket cost is higher than the expected ≈2,000 yen because the
-                          Minimum Tax on High Income Taxpayers (特定の基準所得金額の課税の特例) sets
-                          a statutory tax floor on baseline income. Because baseline income does not
-                          subtract donation deductions, any reduction in baseline income tax is
-                          offset yen-for-yen by an increase in the minimum tax addition.
+                          The estimated out-of-pocket cost is higher than the expected ≈2,000 yen
+                          because the return gifts are estimated to create taxable temporary income
+                          (一時所得) exceeding the ¥500,000 annual special deduction, adding ≈{' '}
+                          {formatJPY(tempIncome.additionalTotalTax)} in income and residence tax (on
+                          top of the {formatJPY(donationOutOfPocketCost)} base donation cost).
                         </Typography>
                         <Typography variant="body2" sx={{ mt: 1 }}>
-                          Note that filing a tax return is required when this minimum tax applies,
-                          so the One-Stop system (ワンストップ特例制度) cannot be used.
+                          Filing a tax return (確定申告) is required when taxable temporary income
+                          arises, so the One-Stop system (ワンストップ特例制度) cannot be used.
                         </Typography>
                       </>
                     ) : (
                       <>
-                        <Typography variant="body2">
-                          The out-of-pocket cost is higher than the expected ≈2,000 yen. This
-                          happens when filing a tax return if taxable income changes income tax
-                          brackets after applying the Furusato Nozei donation deduction.
-                        </Typography>
-                        {oneStopIneligibleNotice ?? (
-                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                            This issue is avoided by using the One-Stop system
-                            (ワンストップ特例制度).
+                        {hasForeignTaxCredit ? (
+                          results.furusatoNozei.incomeTaxReduction === 0 ? (
+                            <>
+                              <Typography variant="body2">
+                                The out-of-pocket cost is higher than the expected ≈2,000 yen
+                                because the Foreign Tax Credit already reduces Japanese national
+                                income tax to ¥0. As a result, the donation deduction cannot reduce
+                                it further.
+                              </Typography>
+                              <Typography variant="body2" sx={{ mt: 1 }}>
+                                Any unused foreign tax credit can be carried forward for up to 3
+                                years. Note that the One-Stop system (ワンストップ特例制度) cannot
+                                be used when claiming the Foreign Tax Credit, as filing a tax return
+                                is required.
+                              </Typography>
+                            </>
+                          ) : (
+                            <>
+                              <Typography variant="body2">
+                                The out-of-pocket cost is higher than the expected ≈2,000 yen.
+                                Applying the donation deduction lowers the Japanese income tax base,
+                                which reduces the allowable Foreign Tax Credit limit.
+                              </Typography>
+                              <Typography variant="body2" sx={{ mt: 1 }}>
+                                Any unused foreign tax credit can be carried forward for up to 3
+                                years. Note that the One-Stop system (ワンストップ特例制度) cannot
+                                be used when claiming the Foreign Tax Credit, as filing a tax return
+                                is required.
+                              </Typography>
+                            </>
+                          )
+                        ) : results.homeLoanTaxCredit &&
+                          results.furusatoNozei.incomeTaxReduction === 0 ? (
+                          <>
+                            <Typography variant="body2">
+                              The out-of-pocket cost is higher than the expected ≈2,000 yen because
+                              the Home Loan Tax Credit already reduces Japanese national income tax
+                              to ¥0, and any spillover into residence tax has reached its statutory
+                              cap.
+                            </Typography>
+                            {oneStopIneligibleNotice ?? (
+                              <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                                If eligible (e.g. year 2+ of mortgage with salary income only), this
+                                issue is avoided by using the One-Stop system
+                                (ワンストップ特例制度).
+                              </Typography>
+                            )}
+                          </>
+                        ) : results.highIncomeMinimumTax ? (
+                          <>
+                            <Typography variant="body2">
+                              The out-of-pocket cost is higher than the expected ≈2,000 yen because
+                              the Minimum Tax on High Income Taxpayers
+                              (特定の基準所得金額の課税の特例) sets a statutory tax floor on
+                              baseline income. Because baseline income does not subtract donation
+                              deductions, any reduction in baseline income tax is offset yen-for-yen
+                              by an increase in the minimum tax addition.
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              Note that filing a tax return is required when this minimum tax
+                              applies, so the One-Stop system (ワンストップ特例制度) cannot be used.
+                            </Typography>
+                          </>
+                        ) : (
+                          <>
+                            <Typography variant="body2">
+                              The out-of-pocket cost is higher than the expected ≈2,000 yen. This
+                              happens when filing a tax return if taxable income changes income tax
+                              brackets after applying the Furusato Nozei donation deduction.
+                            </Typography>
+                            {oneStopIneligibleNotice ?? (
+                              <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                                This issue is avoided by using the One-Stop system
+                                (ワンストップ特例制度).
+                              </Typography>
+                            )}
+                          </>
+                        )}
+                        {hasTemporaryIncomeTax && (
+                          <Typography variant="body2" sx={{ mt: 1 }}>
+                            In addition, estimated taxable temporary income from the return gifts
+                            adds ≈ {formatJPY(tempIncome.additionalTotalTax)} in income and
+                            residence tax ({formatJPY(donationOutOfPocketCost)} donation cost before
+                            temporary income tax + ≈ {formatJPY(tempIncome.additionalTotalTax)}{' '}
+                            temporary income tax = ≈ {formatJPY(totalOutOfPocketCost)} total).
                           </Typography>
                         )}
                       </>
@@ -393,13 +540,13 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             <Box
               component="span"
               sx={{
-                color: hasHighOutOfPocketCost(results.furusatoNozei) ? 'warning.main' : 'inherit',
-                fontWeight: hasHighOutOfPocketCost(results.furusatoNozei) ? 700 : 500,
+                color: hasHighTotalOutOfPocket ? 'warning.main' : 'inherit',
+                fontWeight: hasHighTotalOutOfPocket ? 700 : 500,
                 display: 'inline-flex',
                 alignItems: 'center',
               }}
             >
-              {formatJPY(results.furusatoNozei.outOfPocketCost)}
+              {formattedOutOfPocketTotal}
             </Box>
           }
           type="subtotal"
@@ -413,181 +560,56 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         </Typography>
 
         <ResultRow
-          label="Value of Goods* Received"
+          label={
+            <span>
+              Value of Goods Received
+              <DetailedTooltip title="Estimated Value of Goods Received" icon={SIMPLE_TOOLTIP_ICON}>
+                <Box>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Estimated at {goodsPct} of the donation amount based on the MIC FY2025 Furusato
+                    Nozei status survey (¥352.8B procurement cost across ¥1,331.4B in donations).
+                    Actual return value depends on the municipality and selected items, up to the
+                    statutory 30% procurement ceiling (返礼品調達割合の上限).
+                  </Typography>
+                  <Typography variant="body2">
+                    Delivery and shipping costs ({shippingPct} nationwide average) are excluded from
+                    the usable goods value shown here, though bundled shipping can count toward
+                    temporary income (see Tax on Temporary Income above).
+                  </Typography>
+                  <SourceLinks
+                    sources={[
+                      {
+                        href: FURUSATO_SOURCES.micFy2025Pdf,
+                        label: '令和8年度調査結果 (MIC FY2025 survey — 26.5% goods, 5.7% shipping)',
+                      },
+                      {
+                        href: FURUSATO_SOURCES.micArchive,
+                        label: 'MIC Furusato Nozei status survey',
+                      },
+                    ]}
+                  />
+                </Box>
+              </DetailedTooltip>
+            </span>
+          }
           value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
           type="indented"
         />
 
         <ResultRow
           label="Out-of-Pocket Cost"
-          value={formatJPY(-results.furusatoNozei.outOfPocketCost)}
+          value={formattedOutOfPocketDeduction}
           type="indented"
         />
 
-        {tempIncome.additionalTotalTax > 0 && (
-          <ResultRow
-            label="Tax on Temporary Income*"
-            value={
-              <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
-                ≈ {formatJPY(-tempIncome.additionalTotalTax)}
-              </Box>
-            }
-            type="indented"
-          />
-        )}
+        <Divider sx={{ borderBottomWidth: 2, mt: 0.5 }} />
 
         <ResultRow
           label="Net Estimated Benefit"
           value={`≈ ${formatJPY(netEstimatedBenefit)}`}
-          type="subtotal"
+          type="final"
+          tone={netBenefitTone}
         />
-
-        {/* Temporary Income Progressive Disclosure */}
-        <Box
-          sx={
-            tempIncome.isTaxable
-              ? {
-                  mt: 1.5,
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: 2,
-                  bgcolor: t => alpha(t.palette.warning.main, 0.06),
-                  border: '1px solid',
-                  borderColor: t => alpha(t.palette.warning.main, 0.28),
-                }
-              : {
-                  mt: 1.5,
-                  pt: 0.75,
-                  borderTop: 1,
-                  borderColor: 'divider',
-                }
-          }
-        >
-          <ResultRow
-            label={
-              tempIncome.isTaxable ? (
-                <Box component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                  Temporary Income Estimate (一時所得)
-                </Box>
-              ) : (
-                'Temporary Income Estimate (一時所得)'
-              )
-            }
-            sublabel={
-              tempIncome.isTaxable
-                ? 'Exceeds ¥500,000 deduction (assuming no other temporary income)'
-                : 'Under ¥500,000 deduction (¥0 taxable alone)'
-            }
-            disclosure={{
-              expanded: showTemporaryIncomeDetails,
-              onToggle: handleToggleTemporaryIncome,
-              controlsId: TEMPORARY_INCOME_DETAILS_ID,
-            }}
-            labelSuffix={<FurusatoTemporaryIncomeTooltip estimate={tempIncome} />}
-            value={
-              tempIncome.isTaxable ? (
-                <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
-                  ≈ {formatJPY(tempIncome.estimatedEconomicBenefit)}
-                </Box>
-              ) : (
-                `≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)}`
-              )
-            }
-            type="indented"
-          />
-
-          <Box id={TEMPORARY_INCOME_DETAILS_ID}>
-            <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
-              <ResultRow
-                label={`Goods received (${goodsPct})`}
-                value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
-                type="detail"
-              />
-              <ResultRow
-                label={`Estimated shipping (${shippingPct})`}
-                value={`≈ ${formatJPY(tempIncome.estimatedShippingCost)}`}
-                type="detail"
-              />
-              <ResultRow
-                label={
-                  <span>
-                    Special deduction (特別控除)
-                    <SimpleTooltip>
-                      Annual ¥500,000 deduction shared across all temporary income in the calendar
-                      year.
-                    </SimpleTooltip>
-                  </span>
-                }
-                value={formatJPY(-tempIncome.specialDeduction)}
-                type="detail"
-              />
-              {tempIncome.isTaxable ? (
-                <>
-                  <ResultRow
-                    label="Net temporary income"
-                    value={`≈ ${formatJPY(tempIncome.netTemporaryIncome)}`}
-                    type="detail"
-                  />
-                  <ResultRow
-                    label="Taxable temporary income (½)"
-                    value={
-                      <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
-                        ≈ {formatJPY(tempIncome.taxableTemporaryIncome)}
-                      </Box>
-                    }
-                    type="detail-subtotal"
-                  />
-                  {tempIncome.additionalTotalTax > 0 && (
-                    <ResultRow
-                      label="Additional tax"
-                      sublabel={`Income tax ${formatJPY(tempIncome.additionalNationalIncomeTax)} + Residence tax ${formatJPY(tempIncome.additionalResidenceTax)}`}
-                      value={formatJPY(tempIncome.additionalTotalTax)}
-                      type="detail"
-                    />
-                  )}
-                  <Typography
-                    variant="caption"
-                    sx={{ color: 'text.secondary', pl: 3.5, pt: 0.5, display: 'block' }}
-                  >
-                    Return gifts (including shipping) count as temporary income in the year
-                    delivered. Assumes no other temporary income; filing a tax return is required
-                    when taxable (One-Stop Exception does not apply).
-                  </Typography>
-                </>
-              ) : (
-                <>
-                  <ResultRow
-                    label="Remaining deduction allowance"
-                    value={`≈ ${formatJPY(tempIncome.remainingDeductionAllowance)}`}
-                    type="detail"
-                  />
-                  <ResultRow
-                    label="Taxable temporary income (½)"
-                    value={formatJPY(0)}
-                    type="detail-subtotal"
-                  />
-                </>
-              )}
-            </Collapse>
-          </Box>
-        </Box>
-
-        <Typography
-          variant="caption"
-          sx={{ color: 'text.secondary', fontStyle: 'italic', mt: 1, display: 'block' }}
-        >
-          * Estimated at {goodsPct} of donation amount for goods and {shippingPct} for shipping (
-          {combinedPct} combined), based on the{' '}
-          <a
-            href={FURUSATO_SOURCES.micArchive}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit', textDecoration: 'underline' }}
-          >
-            MIC Furusato Nozei status survey
-          </a>
-          .
-        </Typography>
       </Box>
     </Box>
   );

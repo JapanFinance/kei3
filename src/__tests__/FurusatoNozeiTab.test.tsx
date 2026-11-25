@@ -13,7 +13,11 @@ import type {
   HomeLoanTaxCreditResult,
   TakeHomeResults,
 } from '../types/tax';
-import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
+import {
+  makeFurusatoNozeiDetails,
+  makeResidenceTaxDetails,
+  makeTakeHomeResults,
+} from './fixtures/takeHomeResults';
 
 const mockMinimumTax: HighIncomeMinimumTaxResult = {
   baselineIncome: 353_560_000,
@@ -69,6 +73,47 @@ const mockHomeLoanCredit: HomeLoanTaxCreditResult = {
   warnings: [],
 };
 
+describe('FurusatoNozeiTab Cost Breakdown Layout', () => {
+  it('renders signed reductions and keeps Residence Tax Reduction sub-rows collapsed by default', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      residenceTax: makeResidenceTaxDetails({
+        cityProportion: percentTo(1)(60),
+        prefecturalProportion: percentTo(1)(40),
+      }),
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 77_000,
+        incomeTaxReduction: 7_600,
+        residenceTaxDonationBasicDeduction: 7_500,
+        residenceTaxSpecialDeduction: 59_800,
+        residenceTaxReduction: 67_300,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(screen.getByText('Cost Breakdown (at limit)')).toBeInTheDocument();
+    expect(screen.getByText('Donation Amount')).toBeInTheDocument();
+    expect(screen.queryByText('Total Tax Reduction')).not.toBeInTheDocument();
+    expect(screen.getByText('-¥7,600')).toBeInTheDocument();
+    expect(screen.getByText('-¥67,300')).toBeInTheDocument();
+    expect(screen.getByText('¥2,100')).toBeInTheDocument();
+
+    const residenceToggle = screen.getByRole('button', { name: /Residence Tax Reduction/ });
+    expect(residenceToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Municipal tax credit')).not.toBeInTheDocument();
+    expect(screen.queryByText('Prefectural tax credit')).not.toBeInTheDocument();
+
+    fireEvent.click(residenceToggle);
+
+    expect(residenceToggle).toHaveAttribute('aria-expanded', 'true');
+    const details = document.getElementById(residenceToggle.getAttribute('aria-controls')!)!;
+    expect(within(details).getByText('Municipal tax credit')).toBeInTheDocument();
+    expect(within(details).getByText('-¥40,380')).toBeInTheDocument();
+    expect(within(details).getByText('Prefectural tax credit')).toBeInTheDocument();
+    expect(within(details).getByText('-¥26,920')).toBeInTheDocument();
+  });
+});
+
 describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
   it('does not display warning when out-of-pocket cost is nominal (<= 2,200 yen)', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
@@ -76,7 +121,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 60_000,
         incomeTaxReduction: 5_800,
         residenceTaxReduction: 52_200,
-        outOfPocketCost: 2_000,
       }),
     });
 
@@ -93,7 +137,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 60_000,
         incomeTaxReduction: 0,
         residenceTaxReduction: 50_000,
-        outOfPocketCost: 10_000,
       }),
     });
 
@@ -121,7 +164,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 74_000,
         incomeTaxReduction: 2_800,
         residenceTaxReduction: 64_300,
-        outOfPocketCost: 6_900,
       }),
     });
 
@@ -147,7 +189,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 50_000,
         incomeTaxReduction: 0,
         residenceTaxReduction: 45_000,
-        outOfPocketCost: 5_000,
       }),
     });
 
@@ -172,7 +213,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 4_458_000,
         incomeTaxReduction: 0,
         residenceTaxReduction: 4_001_100,
-        outOfPocketCost: 456_900,
       }),
     });
 
@@ -202,7 +242,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 98_000,
         incomeTaxReduction: 9_800,
         residenceTaxReduction: 76_400,
-        outOfPocketCost: 11_800,
       }),
     });
 
@@ -219,7 +258,42 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     ).toBeInTheDocument();
   });
 
-  it('suppresses One-Stop advice in Branch 4 when taxable temporary income and high salary require filing', () => {
+  it('displays temporary-income cause when temporary income tax alone raises out-of-pocket cost', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      grossEmploymentIncome: 50_000_000,
+      nationalIncomeTax: 15_000_000,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 2_101_000,
+        incomeTaxReduction: 964_300,
+        residenceTaxReduction: 1_134_600,
+        temporaryIncomeTax: {
+          nationalIncomeTax: 40_400,
+          residenceTax: 8_800,
+          total: 49_200,
+        },
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(screen.getByText('≈ ¥51,300')).toBeInTheDocument();
+    expect(screen.getByText('≈ -¥51,300')).toBeInTheDocument();
+    // ¥556,765 goods - ¥51,300 out-of-pocket = ¥505,465
+    expect(screen.getByText('≈ ¥505,465')).toBeInTheDocument();
+
+    expect(screen.getByLabelText('High out-of-pocket cost warning')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /because the return gifts are estimated to create taxable temporary income \(一時所得\) exceeding the ¥500,000 annual special deduction, adding ≈ ¥49,200 in income and residence tax \(on top of the ¥2,100 base donation cost\)/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/taxable income changes income tax brackets/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('explains both bracket shift and temporary income tax and suppresses One-Stop advice when both apply', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       grossEmploymentIncome: 44_000_000,
       nationalIncomeTax: 12_000_000,
@@ -227,7 +301,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 1_830_000,
         incomeTaxReduction: 760_600,
         residenceTaxReduction: 988_200,
-        outOfPocketCost: 81_200,
         temporaryIncomeTax: {
           nationalIncomeTax: 18_400,
           residenceTax: 4_000,
@@ -238,7 +311,9 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
+    // ¥81,200 donation cost + ¥22,400 temporary income tax = ¥103,600
+    expect(screen.getByText('≈ ¥103,600')).toBeInTheDocument();
+    expect(screen.getByText('≈ -¥103,600')).toBeInTheDocument();
     expect(
       screen.getByText(
         /This happens when filing a tax return if taxable income changes income tax brackets after applying the Furusato Nozei donation deduction/,
@@ -251,7 +326,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Tax on temporary income from return gifts is shown separately under Effective Return Analysis and is not included in the out-of-pocket cost above/,
+        /In addition, estimated taxable temporary income from the return gifts adds ≈ ¥22,400 in income and residence tax \(¥81,200 donation cost before temporary income tax \+ ≈ ¥22,400 temporary income tax = ≈ ¥103,600 total\)/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -267,7 +342,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 771_000,
         incomeTaxReduction: 310_000,
         residenceTaxReduction: 458_400,
-        outOfPocketCost: 2_600,
       }),
     });
 
@@ -279,7 +353,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/Tax on temporary income from return gifts is shown separately/),
+      screen.queryByText(/estimated taxable temporary income from the return gifts adds/),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByText(/This issue is avoided by using the One-Stop system/),
@@ -295,7 +369,6 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 852_000,
         incomeTaxReduction: 0,
         residenceTaxReduction: 750_000,
-        outOfPocketCost: 102_000,
       }),
     });
 
@@ -328,49 +401,52 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 });
 
 describe('FurusatoNozeiTab Effective Return Analysis', () => {
-  it('estimates value of goods received at 26.5% of limit and links to MIC survey', () => {
+  it('explains Value of Goods Received in a tooltip without asterisks or bottom footnote', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 60_000,
         incomeTaxReduction: 5_800,
         residenceTaxReduction: 52_200,
-        outOfPocketCost: 2_000,
       }),
     });
 
     render(<FurusatoNozeiTab results={results} />);
 
+    expect(screen.getByText('Value of Goods Received')).toBeInTheDocument();
     expect(screen.getByText('≈ ¥15,900')).toBeInTheDocument();
+    // ¥15,900 - ¥2,000 = ¥13,900
     expect(screen.getByText('≈ ¥13,900')).toBeInTheDocument();
     expect(
-      screen.getByText(/Estimated at 26\.5% of donation amount for goods/),
+      screen.getByText(/Estimated at 26\.5% of the donation amount based on the MIC FY2025/),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'MIC Furusato Nozei status survey' })).toHaveAttribute(
       'href',
       FURUSATO_SOURCES.micArchive,
     );
+    expect(screen.queryByText(/^\* Estimated/)).not.toBeInTheDocument();
   });
 });
 
-describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
-  it('renders collapsed below ¥500,000 and expands to show goods, shipping, and remaining allowance', () => {
+describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
+  it('renders collapsed at ¥0 below ¥500,000 and expands to show goods, shipping, and remaining allowance', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 60_000,
         incomeTaxReduction: 5_800,
         residenceTaxReduction: 52_200,
-        outOfPocketCost: 2_000,
       }),
     });
 
     render(<FurusatoNozeiTab results={results} />);
 
     const toggleButton = screen.getByRole('button', {
-      name: /Temporary Income Estimate \(一時所得\)/,
+      name: /Tax on Temporary Income/,
     });
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByText('Under ¥500,000 deduction (¥0 taxable alone)')).toBeInTheDocument();
-    expect(screen.getByText('≈ ¥19,320')).toBeInTheDocument();
+    expect(
+      screen.getByText('Under ¥500,000 deduction (≈ ¥19,320 est. benefit)'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('¥0')).toBeInTheDocument();
     expect(screen.queryByText('Estimated shipping (5.7%)')).not.toBeInTheDocument();
 
     fireEvent.click(toggleButton);
@@ -381,19 +457,20 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
     expect(within(details).getByText('≈ ¥15,900')).toBeInTheDocument();
     expect(within(details).getByText('Estimated shipping (5.7%)')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥3,420')).toBeInTheDocument();
+    expect(within(details).getByText('Estimated economic benefit')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥19,320')).toBeInTheDocument();
     expect(within(details).getByText('Remaining deduction allowance')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥480,680')).toBeInTheDocument();
     expect(within(details).getByText('Taxable temporary income (½)')).toBeInTheDocument();
     expect(within(details).getByText('¥0')).toBeInTheDocument();
   });
 
-  it('starts collapsed above ¥500,000, shows warning tooltip icon without double icon, and deducts engine tax', () => {
+  it('starts collapsed above ¥500,000, shows warning tooltip icon without double icon, and includes tax in Out-of-Pocket Cost', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 2_200_000,
         incomeTaxReduction: 1_009_900,
         residenceTaxReduction: 1_188_100,
-        outOfPocketCost: 2_000,
         temporaryIncomeTax: {
           nationalIncomeTax: 47_800,
           residenceTax: 10_400,
@@ -405,11 +482,11 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
     render(<FurusatoNozeiTab results={results} />);
 
     const toggleButton = screen.getByRole('button', {
-      name: /Temporary Income Estimate \(一時所得\)/,
+      name: /Tax on Temporary Income/,
     });
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
     expect(
-      screen.getByText('Exceeds ¥500,000 deduction (assuming no other temporary income)'),
+      screen.getByText('Exceeds ¥500,000 deduction (≈ ¥708,400 est. benefit)'),
     ).toBeInTheDocument();
     expect(screen.queryByText('Estimated shipping (5.7%)')).not.toBeInTheDocument();
 
@@ -419,10 +496,10 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
       within(toggleButton.parentElement!).queryByTestId('HelpOutlineIcon'),
     ).not.toBeInTheDocument();
 
-    // Effective Return Analysis deducts the engine-computed temporary income tax (¥58,200)
-    expect(screen.getByText('Tax on Temporary Income*')).toBeInTheDocument();
-    expect(screen.getByText('≈ -¥58,200')).toBeInTheDocument();
-    // ¥583,000 goods - ¥2,000 out-of-pocket - ¥58,200 tax = ¥522,800
+    // Cost Breakdown includes ¥58,200 temp tax -> ¥60,200 Out-of-Pocket Cost; Net = ¥583,000 - ¥60,200 = ¥522,800
+    expect(screen.getByText('≈ ¥58,200')).toBeInTheDocument();
+    expect(screen.getByText('≈ ¥60,200')).toBeInTheDocument();
+    expect(screen.getByText('≈ -¥60,200')).toBeInTheDocument();
     expect(screen.getByText('≈ ¥522,800')).toBeInTheDocument();
 
     // Clicking expands the breakdown
@@ -432,13 +509,14 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
     const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
     expect(within(details).getByText('≈ ¥583,000')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥125,400')).toBeInTheDocument();
+    expect(within(details).getByText('≈ ¥708,400')).toBeInTheDocument();
     expect(within(details).getByText('-¥500,000')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥208,400')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥104,200')).toBeInTheDocument();
-    expect(within(details).getByText('¥58,200')).toBeInTheDocument();
-    expect(
-      within(details).getByText('Income tax ¥47,800 + Residence tax ¥10,400'),
-    ).toBeInTheDocument();
+    expect(within(details).getByText('Income tax & surtax')).toBeInTheDocument();
+    expect(within(details).getByText('¥47,800')).toBeInTheDocument();
+    expect(within(details).getByText('Residence tax')).toBeInTheDocument();
+    expect(within(details).getByText('¥10,400')).toBeInTheDocument();
 
     // Official legal and statistical source links are present in the tooltip
     expect(screen.getByRole('link', { name: /令和4年2月7日裁決/ })).toHaveAttribute(
@@ -453,9 +531,8 @@ describe('FurusatoNozeiTab Temporary Income Disclosure', () => {
       'href',
       FURUSATO_SOURCES.tokyoHighCourt2024Pdf,
     );
-    expect(screen.getByRole('link', { name: /令和8年度調査結果/ })).toHaveAttribute(
-      'href',
-      FURUSATO_SOURCES.micFy2025Pdf,
-    );
+    expect(
+      screen.getAllByRole('link', { name: /令和8年度調査結果/ }).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 });

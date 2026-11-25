@@ -52,9 +52,12 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
           <strong>Valuation & Shipping:</strong> Fair market value (時価) is based on each
           municipality's procurement cost (返礼品調達価格). Where procurement and delivery are
           contracted together, the National Tax Tribunal held that shipping equivalents are not
-          deducted from the economic benefit. This estimate uses FY2025 MIC nationwide averages (
-          {goodsPct} goods + {shippingPct} shipping = {combinedPct} combined); actual amounts depend
-          on each municipality's valuation.
+          deducted from the economic benefit, whereas municipalities that contract and pay delivery
+          separately typically exclude shipping from their reported procurement cost. Because
+          donor-side advance estimates cannot know each municipality's contracting method, this
+          estimate uses FY2025 MIC nationwide averages ({goodsPct} goods + {shippingPct} shipping ={' '}
+          {combinedPct} combined) as a conservative upper-side estimate; actual amounts depend on
+          each municipality's valuation.
         </Typography>
         <Typography variant="body2" sx={{ mb: 1 }}>
           <strong>Special Deduction (特別控除):</strong> An annual{' '}

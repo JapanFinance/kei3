@@ -1356,7 +1356,6 @@ export interface FurusatoNozeiDetails {
   incomeTaxReduction: number;
   residenceTaxDonationBasicDeduction: number;
   residenceTaxSpecialDeduction: number;
-  outOfPocketCost: number;
   residenceTaxReduction: number;
   temporaryIncomeTax?: FurusatoTemporaryIncomeTax | undefined;
 }
@@ -1366,7 +1365,6 @@ export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {
   incomeTaxReduction: 0,
   residenceTaxDonationBasicDeduction: 0,
   residenceTaxSpecialDeduction: 0,
-  outOfPocketCost: 0,
   residenceTaxReduction: 0,
 };
 

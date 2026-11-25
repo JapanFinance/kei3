@@ -30,7 +30,8 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 60_000,
-        outOfPocketCost: 2_000,
+        incomeTaxReduction: 5_800,
+        residenceTaxReduction: 52_200,
       }),
     });
 
@@ -47,7 +48,8 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 60_000,
-        outOfPocketCost: 10_000,
+        incomeTaxReduction: 0,
+        residenceTaxReduction: 50_000,
       }),
     });
 
@@ -62,11 +64,12 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
   });
 
-  it('renders orange warning icon in Furusato tab label when estimated temporary income is taxable', () => {
+  it('renders orange warning icon in Furusato tab label when estimated temporary income is taxable without adding tax', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 2_200_000,
-        outOfPocketCost: 2_000,
+        incomeTaxReduction: 1_009_900,
+        residenceTaxReduction: 1_188_100,
       }),
     });
 
@@ -81,11 +84,17 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
   });
 
-  it('combines warning title when both out-of-pocket cost and temporary income warnings apply', () => {
+  it('combines warning title when temporary income tax or donation cost raises out-of-pocket cost alongside taxable temporary income', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 2_200_000,
-        outOfPocketCost: 10_000,
+        incomeTaxReduction: 1_009_900,
+        residenceTaxReduction: 1_188_100,
+        temporaryIncomeTax: {
+          nationalIncomeTax: 47_800,
+          residenceTax: 10_400,
+          total: 58_200,
+        },
       }),
     });
 
