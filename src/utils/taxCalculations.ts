@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
-import { TEMPORARY_INCOME_SPECIAL_DEDUCTION } from '../data/furusatoNozei';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import {
   NATIONAL_INCOME_TAX_BRACKETS,
@@ -11,6 +10,7 @@ import {
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import type { Rate } from '../data/rate';
+import { TEMPORARY_INCOME_SPECIAL_DEDUCTION } from '../data/temporaryIncome';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,

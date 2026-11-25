@@ -14,7 +14,6 @@ import React, { useState } from 'react';
 import {
   FURUSATO_AVERAGE_GIFT_COST_RATE,
   FURUSATO_AVERAGE_SHIPPING_COST_RATE,
-  FURUSATO_SOURCES,
 } from '../../../data/furusatoNozei';
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
@@ -28,10 +27,21 @@ import {
   type OneStopIneligibilityReason,
 } from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
-import SourceLinks from '../../ui/SourceLinks';
+import SourceLinks, { type Source } from '../../ui/SourceLinks';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
-import { FurusatoTemporaryIncomeTooltip } from './FurusatoTemporaryIncomeTooltip';
+import {
+  FurusatoTemporaryIncomeTooltip,
+  MIC_FY2025_SURVEY_SOURCE,
+} from './FurusatoTemporaryIncomeTooltip';
+
+const GIFT_VALUE_SOURCES: Source[] = [
+  MIC_FY2025_SURVEY_SOURCE,
+  {
+    href: 'https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03',
+    label: 'MIC Furusato Nozei status survey',
+  },
+];
 
 interface FurusatoNozeiTabProps {
   results: TakeHomeResults;
@@ -411,8 +421,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                           top of the {formatJPY(donationOutOfPocketCost)} base donation cost).
                         </Typography>
                         <Typography variant="body2" sx={{ mt: 1 }}>
-                          Filing a tax return (確定申告) is required when taxable temporary income
-                          arises, so the One-Stop system (ワンストップ特例制度) cannot be used.
+                          Filing a tax return is required when taxable temporary income arises, so
+                          the One-Stop system (ワンストップ特例制度) cannot be used.
                         </Typography>
                       </>
                     ) : (
@@ -541,28 +551,16 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               <DetailedTooltip title="Estimated Value of Gifts Received" icon={SIMPLE_TOOLTIP_ICON}>
                 <Box>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    Estimated at {giftsPct} of the donation amount based on the MIC FY2025 Furusato
-                    Nozei status survey (¥352.8B procurement cost across ¥1,331.4B in donations).
-                    Actual return value depends on the municipality and selected items, up to the
-                    statutory 30% procurement ceiling (返礼品調達割合の上限).
+                    Estimated at {giftsPct} of the donation amount based on the MIC Furusato Nozei
+                    status survey. Actual return value depends on the municipality and selected
+                    items, up to the statutory 30% procurement ceiling.
                   </Typography>
                   <Typography variant="body2">
                     Delivery and shipping costs ({shippingPct} nationwide average) are excluded from
                     the usable gift value shown here, though bundled shipping can count toward
                     temporary income (see Tax on Gift Temporary Income above).
                   </Typography>
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: FURUSATO_SOURCES.micFy2025Pdf,
-                        label: '令和8年度調査結果 (MIC FY2025 survey — 26.5% goods, 5.7% shipping)',
-                      },
-                      {
-                        href: FURUSATO_SOURCES.micArchive,
-                        label: 'MIC Furusato Nozei status survey',
-                      },
-                    ]}
-                  />
+                  <SourceLinks sources={GIFT_VALUE_SOURCES} />
                 </Box>
               </DetailedTooltip>
             </span>

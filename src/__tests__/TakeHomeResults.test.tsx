@@ -70,6 +70,7 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
         limit: 2_200_000,
         incomeTaxReduction: 1_009_900,
         residenceTaxReduction: 1_188_100,
+        temporaryIncomeTax: { nationalIncomeTax: 0, residenceTax: 0, total: 0 },
       }),
     });
 

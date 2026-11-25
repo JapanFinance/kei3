@@ -5,7 +5,6 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNozeiTab';
-import { FURUSATO_SOURCES } from '../data/furusatoNozei';
 import { percentTo } from '../data/rate';
 import type {
   ForeignTaxCreditResult,
@@ -282,15 +281,11 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     expect(screen.getByText('≈ ¥505,465')).toBeInTheDocument();
 
     expect(screen.getByLabelText('High out-of-pocket cost warning')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /because the return gifts are estimated to create taxable temporary income \(一時所得\) exceeding the ¥500,000 annual special deduction, adding ≈ ¥49,200 in income and residence tax \(on top of the ¥2,100 base donation cost\)/,
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/taxable temporary income \(一時所得\)/)).toBeInTheDocument();
+    expect(screen.getByText(/adding ≈ ¥49,200/)).toBeInTheDocument();
+    expect(screen.getByText(/¥2,100 base donation cost/)).toBeInTheDocument();
     expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/taxable income changes income tax brackets/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/income tax brackets/)).not.toBeInTheDocument();
   });
 
   it('explains both bracket shift and temporary income tax and suppresses One-Stop advice when both apply', () => {
@@ -314,20 +309,17 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     // ¥81,200 donation cost + ¥22,400 temporary income tax = ¥103,600
     expect(screen.getByText('≈ ¥103,600')).toBeInTheDocument();
     expect(screen.getByText('≈ -¥103,600')).toBeInTheDocument();
+    expect(screen.getByText(/changes income tax brackets/)).toBeInTheDocument();
+    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /This happens when filing a tax return if taxable income changes income tax brackets after applying the Furusato Nozei donation deduction/,
-      ),
+      screen.getByText(/taxable temporary income from Furusato Nozei return gifts/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/gross employment income exceeding ¥20,000,000/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/¥81,200 donation cost before temporary income tax/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /The One-Stop system \(ワンストップ特例制度\) cannot be used to avoid this here because filing a tax return is required \(taxable temporary income from Furusato Nozei return gifts; gross employment income exceeding ¥20,000,000\)/,
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /In addition, estimated taxable temporary income from the return gifts adds ≈ ¥22,400 in income and residence tax \(¥81,200 donation cost before temporary income tax \+ ≈ ¥22,400 temporary income tax = ≈ ¥103,600 total\)/,
-      ),
+      screen.getByText(/≈ ¥22,400 temporary income tax = ≈ ¥103,600 total/),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(/This issue is avoided by using the One-Stop system/),
@@ -347,14 +339,9 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(
-      screen.getByText(
-        /The One-Stop system \(ワンストップ特例制度\) cannot be used to avoid this here because filing a tax return is required \(gross employment income exceeding ¥20,000,000\)/,
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/estimated taxable temporary income from the return gifts adds/),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
+    expect(screen.getByText(/gross employment income exceeding ¥20,000,000/)).toBeInTheDocument();
+    expect(screen.queryByText(/adds ≈/)).not.toBeInTheDocument();
     expect(
       screen.queryByText(/This issue is avoided by using the One-Stop system/),
     ).not.toBeInTheDocument();
@@ -374,16 +361,9 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(
-      screen.getByText(
-        /because the Home Loan Tax Credit already reduces Japanese national income tax to ¥0, and any spillover into residence tax has reached its statutory cap/,
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /The One-Stop system \(ワンストップ特例制度\) cannot be used to avoid this here because filing a tax return is required \(gross employment income exceeding ¥20,000,000\)/,
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Home Loan Tax Credit already reduces/)).toBeInTheDocument();
+    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
+    expect(screen.getByText(/gross employment income exceeding ¥20,000,000/)).toBeInTheDocument();
     expect(
       screen.queryByText(/If eligible.*this issue is avoided by using the One-Stop system/s),
     ).not.toBeInTheDocument();
@@ -416,12 +396,10 @@ describe('FurusatoNozeiTab Effective Return Analysis', () => {
     expect(screen.getByText('≈ ¥15,900')).toBeInTheDocument();
     // ¥15,900 - ¥2,000 = ¥13,900
     expect(screen.getByText('≈ ¥13,900')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Estimated at 26\.5% of the donation amount based on the MIC FY2025/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/26\.5% of the donation amount/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'MIC Furusato Nozei status survey' })).toHaveAttribute(
       'href',
-      FURUSATO_SOURCES.micArchive,
+      'https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac03',
     );
     expect(screen.queryByText(/^\* Estimated/)).not.toBeInTheDocument();
   });
@@ -522,15 +500,15 @@ describe('FurusatoNozeiTab Tax on Gift Temporary Income Disclosure', () => {
     // Official legal and statistical source links are present in the tooltip
     expect(screen.getByRole('link', { name: /令和4年2月7日裁決/ })).toHaveAttribute(
       'href',
-      FURUSATO_SOURCES.kfsDecision2022,
+      'https://www.kfs.go.jp/service/JP/126/02/index.html',
     );
     expect(screen.getByRole('link', { name: /横浜地裁 令和6年2月14日判決/ })).toHaveAttribute(
       'href',
-      FURUSATO_SOURCES.yokohamaDistrictCourt2024Pdf,
+      'https://www.nta.go.jp/about/organization/ntc/soshoshiryo/kazei/2024/pdf/13940.pdf',
     );
     expect(screen.getByRole('link', { name: /東京高裁 令和6年12月11日判決/ })).toHaveAttribute(
       'href',
-      FURUSATO_SOURCES.tokyoHighCourt2024Pdf,
+      'https://www.nta.go.jp/about/organization/ntc/soshoshiryo/kazei/2024/pdf/14061.pdf',
     );
     expect(
       screen.getAllByRole('link', { name: /令和8年度調査結果/ }).length,

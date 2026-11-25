@@ -4,7 +4,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
-import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import {
+  DEFAULT_INCOME_YEAR,
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  type SeparateTaxationReportedIncome,
+} from '../types/tax';
 import {
   estimateFurusatoEconomicBenefit,
   estimateFurusatoTemporaryIncome,
@@ -60,14 +64,28 @@ describe('estimateFurusatoEconomicBenefit', () => {
 });
 
 describe('hasTaxableFurusatoTemporaryIncome', () => {
-  it('returns false right below the ¥500,000 deduction threshold and true right above it', () => {
-    const below = makeFurusatoNozeiDetails({ limit: 1_552_000 });
-    const above = makeFurusatoNozeiDetails({ limit: 1_553_000 });
+  it('reads whether the engine populated temporaryIncomeTax', () => {
+    const withoutTax = makeFurusatoNozeiDetails({ limit: 2_200_000 });
+    const withZeroTax = makeFurusatoNozeiDetails({
+      limit: 2_200_000,
+      temporaryIncomeTax: { nationalIncomeTax: 0, residenceTax: 0, total: 0 },
+    });
+    const withTax = makeFurusatoNozeiDetails({
+      limit: 2_200_000,
+      temporaryIncomeTax: { nationalIncomeTax: 47_800, residenceTax: 10_400, total: 58_200 },
+    });
 
-    expect(estimateFurusatoEconomicBenefit(below.limit).estimatedEconomicBenefit).toBe(499_744);
-    expect(estimateFurusatoEconomicBenefit(above.limit).estimatedEconomicBenefit).toBe(500_066);
-    expect(hasTaxableFurusatoTemporaryIncome(below)).toBe(false);
-    expect(hasTaxableFurusatoTemporaryIncome(above)).toBe(true);
+    expect(hasTaxableFurusatoTemporaryIncome(withoutTax)).toBe(false);
+    expect(hasTaxableFurusatoTemporaryIncome(withZeroTax)).toBe(true);
+    expect(hasTaxableFurusatoTemporaryIncome(withTax)).toBe(true);
+  });
+
+  it('matches the ¥500,000 benefit threshold in the tax engine', () => {
+    const below = estimateFurusatoEconomicBenefit(1_552_000);
+    const above = estimateFurusatoEconomicBenefit(1_553_000);
+
+    expect(below.estimatedEconomicBenefit).toBe(499_744);
+    expect(above.estimatedEconomicBenefit).toBe(500_066);
   });
 });
 
@@ -287,6 +305,7 @@ describe('getOneStopIneligibilityReasons', () => {
         limit: 1_830_000,
         incomeTaxReduction: 760_600,
         residenceTaxReduction: 988_200,
+        temporaryIncomeTax: { nationalIncomeTax: 18_400, residenceTax: 4_000, total: 22_400 },
       }),
     });
 
@@ -314,18 +333,22 @@ describe('getOneStopIneligibilityReasons', () => {
   });
 
   it('detects business/misc, real estate, reported investment, and medical expense triggers', () => {
+    const separate: SeparateTaxationReportedIncome = {
+      gross: { capitalGains: 200_000, dividends: 0 },
+      lossOffsetAgainstDividends: 0,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 200_000, dividends: 0 },
+      taxable: { capitalGains: 200_000, dividends: 0 },
+      nationalIncomeTaxBase: 30_000,
+    };
+
     const results = makeTakeHomeResults({
       netBusinessAndMiscIncome: -100_000,
       businessBlueFilerDeduction: 100_000,
       realEstate: { netIncome: 500_000, blueFilerDeduction: 0 },
       investmentIncome: {
-        reported: {
-          capitalGains: 200_000,
-          dividends: 0,
-          taxation: 'separate',
-        } as unknown as NonNullable<
-          ReturnType<typeof makeTakeHomeResults>['investmentIncome']
-        >['reported'],
+        reported: { separate },
       },
       additionalDeductions: {
         national: 50_000,

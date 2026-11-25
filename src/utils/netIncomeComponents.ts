@@ -1,12 +1,12 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
+import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import {
   TEMPORARY_INCOME_INCLUSION_DIVISOR,
   TEMPORARY_INCOME_SPECIAL_DEDUCTION,
-} from '../data/furusatoNozei';
-import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
-import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
+} from '../data/temporaryIncome';
 import type { AgeRange } from '../types/age';
 import type { SeparateNetIncome } from '../types/tax';
 import { NO_SEPARATE_NET_INCOME } from './investmentIncome';

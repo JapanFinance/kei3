@@ -6,9 +6,11 @@ import {
   FURUSATO_AVERAGE_SHIPPING_COST_RATE,
   MANDATORY_RETURN_PENSION_THRESHOLD,
   MANDATORY_RETURN_SALARY_THRESHOLD,
+} from '../data/furusatoNozei';
+import {
   TEMPORARY_INCOME_INCLUSION_DIVISOR,
   TEMPORARY_INCOME_SPECIAL_DEDUCTION,
-} from '../data/furusatoNozei';
+} from '../data/temporaryIncome';
 import type { FurusatoNozeiDetails, TakeHomeResults } from '../types/tax';
 
 // The nominal out-of-pocket cost at the limit is 2,000 yen. The residence tax
@@ -62,7 +64,7 @@ export interface FurusatoTemporaryIncomeEstimate extends FurusatoEconomicBenefit
   netTemporaryIncome: number;
   /** Amount included in aggregate taxable income: floor(netTemporaryIncome / 2). */
   taxableTemporaryIncome: number;
-  /** Whether estimated economic benefit alone exceeds the ¥500,000 special deduction. */
+  /** Whether the engine evaluated Furusato Nozei return gifts as taxable temporary income. */
   isTaxable: boolean;
   /** Engine-computed incremental national income tax + reconstruction surtax (0 when not taxable). */
   additionalNationalIncomeTax: number;
@@ -97,13 +99,11 @@ export const estimateFurusatoEconomicBenefit = (limit: number): FurusatoEconomic
 };
 
 /**
- * Returns true when estimated economic benefit from Furusato Nozei return gifts alone exceeds the
- * ¥500,000 annual special deduction for temporary income (assuming no other temporary income).
+ * Returns true when the tax engine evaluated Furusato Nozei return gifts as creating taxable
+ * temporary income (i.e. {@link FurusatoNozeiDetails.temporaryIncomeTax} is populated).
  */
 export const hasTaxableFurusatoTemporaryIncome = (furusatoNozei: FurusatoNozeiDetails): boolean =>
-  furusatoNozei.limit > 0 &&
-  estimateFurusatoEconomicBenefit(furusatoNozei.limit).estimatedEconomicBenefit >
-    TEMPORARY_INCOME_SPECIAL_DEDUCTION;
+  furusatoNozei.temporaryIncomeTax !== undefined;
 
 /**
  * Summarizes the temporary income (一時所得) estimate and reads the engine-computed incremental
@@ -122,7 +122,7 @@ export const estimateFurusatoTemporaryIncome = (
   const taxableTemporaryIncome = Math.floor(
     netTemporaryIncome / TEMPORARY_INCOME_INCLUSION_DIVISOR,
   );
-  const isTaxable = benefit.estimatedEconomicBenefit > specialDeduction;
+  const isTaxable = hasTaxableFurusatoTemporaryIncome(furusatoNozei);
   const temporaryIncomeTax = furusatoNozei.temporaryIncomeTax;
 
   return {
