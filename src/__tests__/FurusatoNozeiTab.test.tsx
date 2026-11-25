@@ -401,7 +401,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 });
 
 describe('FurusatoNozeiTab Effective Return Analysis', () => {
-  it('explains Value of Goods Received in a tooltip without asterisks or bottom footnote', () => {
+  it('explains Value of Gifts Received in a tooltip without asterisks or bottom footnote', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 60_000,
@@ -412,7 +412,7 @@ describe('FurusatoNozeiTab Effective Return Analysis', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText('Value of Goods Received')).toBeInTheDocument();
+    expect(screen.getByText('Value of Gifts Received')).toBeInTheDocument();
     expect(screen.getByText('≈ ¥15,900')).toBeInTheDocument();
     // ¥15,900 - ¥2,000 = ¥13,900
     expect(screen.getByText('≈ ¥13,900')).toBeInTheDocument();
@@ -427,8 +427,8 @@ describe('FurusatoNozeiTab Effective Return Analysis', () => {
   });
 });
 
-describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
-  it('renders collapsed at ¥0 below ¥500,000 and expands to show goods, shipping, and remaining allowance', () => {
+describe('FurusatoNozeiTab Tax on Gift Temporary Income Disclosure', () => {
+  it('renders collapsed at ¥0 below ¥500,000 and expands to compact gift, shipping, benefit, and ¥0 net rows', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 60_000,
@@ -440,7 +440,7 @@ describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
     render(<FurusatoNozeiTab results={results} />);
 
     const toggleButton = screen.getByRole('button', {
-      name: /Tax on Temporary Income/,
+      name: /Tax on Gift Temporary Income/,
     });
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText(/est\. benefit/)).not.toBeInTheDocument();
@@ -451,16 +451,17 @@ describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
 
     expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
     const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
-    expect(within(details).getByText('Goods received (26.5%)')).toBeInTheDocument();
+    expect(within(details).getByText('Gifts received (26.5%)')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥15,900')).toBeInTheDocument();
     expect(within(details).getByText('Estimated shipping (5.7%)')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥3,420')).toBeInTheDocument();
     expect(within(details).getByText('Estimated economic benefit')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥19,320')).toBeInTheDocument();
-    expect(within(details).getByText('Remaining deduction allowance')).toBeInTheDocument();
-    expect(within(details).getByText('≈ ¥480,680')).toBeInTheDocument();
-    expect(within(details).getByText('Taxable temporary income (½)')).toBeInTheDocument();
+    expect(within(details).getByText('Net temporary income')).toBeInTheDocument();
     expect(within(details).getByText('¥0')).toBeInTheDocument();
+    expect(within(details).queryByText(/Special deduction/)).not.toBeInTheDocument();
+    expect(within(details).queryByText('Remaining deduction allowance')).not.toBeInTheDocument();
+    expect(within(details).queryByText('Taxable temporary income (½)')).not.toBeInTheDocument();
   });
 
   it('starts collapsed above ¥500,000, shows warning tooltip icon without double icon, and includes tax in Out-of-Pocket Cost', () => {
@@ -480,7 +481,7 @@ describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
     render(<FurusatoNozeiTab results={results} />);
 
     const toggleButton = screen.getByRole('button', {
-      name: /Tax on Temporary Income/,
+      name: /Tax on Gift Temporary Income/,
     });
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText(/est\. benefit/)).not.toBeInTheDocument();
@@ -503,16 +504,20 @@ describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
     expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
 
     const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
+    expect(within(details).getByText('Gifts received (26.5%)')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥583,000')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥125,400')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥708,400')).toBeInTheDocument();
-    expect(within(details).getByText('-¥500,000')).toBeInTheDocument();
+    expect(within(details).queryByText(/Special deduction/)).not.toBeInTheDocument();
     expect(within(details).getByText('≈ ¥208,400')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥104,200')).toBeInTheDocument();
     expect(within(details).getByText('Income tax & surtax')).toBeInTheDocument();
     expect(within(details).getByText('¥47,800')).toBeInTheDocument();
     expect(within(details).getByText('Residence tax')).toBeInTheDocument();
     expect(within(details).getByText('¥10,400')).toBeInTheDocument();
+    expect(
+      within(details).queryByText(/Return gifts \(including shipping\) count as temporary income/),
+    ).not.toBeInTheDocument();
 
     // Official legal and statistical source links are present in the tooltip
     expect(screen.getByRole('link', { name: /令和4年2月7日裁決/ })).toHaveAttribute(

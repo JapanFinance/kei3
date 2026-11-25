@@ -10,7 +10,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Updated
 
-- Redesigned the Furusato Nozei tab so Cost Breakdown (at limit) shows Donation Amount with negative Income Tax Reduction and collapsible Residence Tax Reduction rows summing directly to Out-of-Pocket Cost, and moved the Value of Goods Received explanation from a footnote to an inline tooltip.
+- Redesigned the Furusato Nozei tab so Cost Breakdown (at limit) shows Donation Amount with negative Income Tax Reduction and collapsible Residence Tax Reduction rows summing directly to Out-of-Pocket Cost, and moved the Value of Gifts Received explanation from a footnote to an inline tooltip.
 
 ### Fixed
 

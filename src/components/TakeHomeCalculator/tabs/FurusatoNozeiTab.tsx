@@ -299,10 +299,10 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           label={
             tempIncome.isTaxable ? (
               <Box component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                Tax on Temporary Income
+                Tax on Gift Temporary Income
               </Box>
             ) : (
-              'Tax on Temporary Income'
+              'Tax on Gift Temporary Income'
             )
           }
           disclosure={{
@@ -326,7 +326,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         <Box id={TEMPORARY_INCOME_DETAILS_ID}>
           <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
             <ResultRow
-              label={`Goods received (${goodsPct})`}
+              label={`Gifts received (${goodsPct})`}
               value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
               type="detail"
             />
@@ -343,23 +343,23 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             <ResultRow
               label={
                 <span>
-                  Special deduction (特別控除)
+                  Net temporary income
                   <SimpleTooltip>
-                    Annual ¥500,000 deduction shared across all temporary income in the calendar
-                    year.
+                    Estimated economic benefit minus the ¥500,000 annual special deduction
+                    (特別控除), shared across all temporary income in the calendar year. Floored at
+                    ¥0.
                   </SimpleTooltip>
                 </span>
               }
-              value={formatJPY(-tempIncome.specialDeduction)}
-              type="detail"
+              value={
+                tempIncome.isTaxable
+                  ? `≈ ${formatJPY(tempIncome.netTemporaryIncome)}`
+                  : formatJPY(0)
+              }
+              type={tempIncome.isTaxable ? 'detail' : 'detail-subtotal'}
             />
-            {tempIncome.isTaxable ? (
+            {tempIncome.isTaxable && (
               <>
-                <ResultRow
-                  label="Net temporary income"
-                  value={`≈ ${formatJPY(tempIncome.netTemporaryIncome)}`}
-                  type="detail"
-                />
                 <ResultRow
                   label="Taxable temporary income (½)"
                   value={
@@ -383,27 +383,6 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                     />
                   </>
                 )}
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'text.secondary', pl: 3.5, pt: 0.5, display: 'block' }}
-                >
-                  Return gifts (including shipping) count as temporary income in the year delivered.
-                  Assumes no other temporary income; filing a tax return is required when taxable
-                  (One-Stop Exception does not apply).
-                </Typography>
-              </>
-            ) : (
-              <>
-                <ResultRow
-                  label="Remaining deduction allowance"
-                  value={`≈ ${formatJPY(tempIncome.remainingDeductionAllowance)}`}
-                  type="detail"
-                />
-                <ResultRow
-                  label="Taxable temporary income (½)"
-                  value={formatJPY(0)}
-                  type="detail-subtotal"
-                />
               </>
             )}
           </Collapse>
@@ -557,8 +536,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         <ResultRow
           label={
             <span>
-              Value of Goods Received
-              <DetailedTooltip title="Estimated Value of Goods Received" icon={SIMPLE_TOOLTIP_ICON}>
+              Value of Gifts Received
+              <DetailedTooltip title="Estimated Value of Gifts Received" icon={SIMPLE_TOOLTIP_ICON}>
                 <Box>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     Estimated at {goodsPct} of the donation amount based on the MIC FY2025 Furusato
@@ -568,8 +547,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   </Typography>
                   <Typography variant="body2">
                     Delivery and shipping costs ({shippingPct} nationwide average) are excluded from
-                    the usable goods value shown here, though bundled shipping can count toward
-                    temporary income (see Tax on Temporary Income above).
+                    the usable gift value shown here, though bundled shipping can count toward
+                    temporary income (see Tax on Gift Temporary Income above).
                   </Typography>
                   <SourceLinks
                     sources={[
