@@ -75,14 +75,14 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
     );
   }
 
-  const goodsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
+  const giftsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
   const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
   const donationOutOfPocketCost = getFurusatoDonationOutOfPocketCost(results.furusatoNozei);
   const totalOutOfPocketCost = getFurusatoOutOfPocketCost(results.furusatoNozei);
   const hasTemporaryIncomeTax = tempIncome.additionalTotalTax > 0;
   const hasHighDonationCost = hasHighDonationOutOfPocketCost(results.furusatoNozei);
   const hasHighTotalOutOfPocket = hasHighOutOfPocketCost(results.furusatoNozei);
-  const netEstimatedBenefit = tempIncome.estimatedGoodsValue - totalOutOfPocketCost;
+  const netEstimatedBenefit = tempIncome.estimatedGiftsValue - totalOutOfPocketCost;
   const netBenefitTone = netEstimatedBenefit < 0 ? ('warning' as const) : ('success' as const);
 
   const residenceTaxCreditBase =
@@ -326,8 +326,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         <Box id={TEMPORARY_INCOME_DETAILS_ID}>
           <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
             <ResultRow
-              label={`Gifts received (${goodsPct})`}
-              value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
+              label={`Value of gifts received (${giftsPct})`}
+              value={`≈ ${formatJPY(tempIncome.estimatedGiftsValue)}`}
               type="detail"
             />
             <ResultRow
@@ -346,8 +346,9 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   Net temporary income
                   <SimpleTooltip>
                     Estimated economic benefit minus the ¥500,000 annual special deduction
-                    (特別控除), shared across all temporary income in the calendar year. Floored at
-                    ¥0.
+                    (特別控除), shared across all temporary income in the calendar year (floored at
+                    ¥0). Half (½) of any positive net temporary income is added to aggregate taxable
+                    income (総所得金額).
                   </SimpleTooltip>
                 </span>
               }
@@ -540,7 +541,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               <DetailedTooltip title="Estimated Value of Gifts Received" icon={SIMPLE_TOOLTIP_ICON}>
                 <Box>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    Estimated at {goodsPct} of the donation amount based on the MIC FY2025 Furusato
+                    Estimated at {giftsPct} of the donation amount based on the MIC FY2025 Furusato
                     Nozei status survey (¥352.8B procurement cost across ¥1,331.4B in donations).
                     Actual return value depends on the municipality and selected items, up to the
                     statutory 30% procurement ceiling (返礼品調達割合の上限).
@@ -566,7 +567,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               </DetailedTooltip>
             </span>
           }
-          value={`≈ ${formatJPY(tempIncome.estimatedGoodsValue)}`}
+          value={`≈ ${formatJPY(tempIncome.estimatedGiftsValue)}`}
           type="indented"
         />
 

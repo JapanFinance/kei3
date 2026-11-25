@@ -36,24 +36,24 @@ const baseInputs = {
 describe('estimateFurusatoEconomicBenefit', () => {
   it('returns zeros when donation limit is zero or negative', () => {
     expect(estimateFurusatoEconomicBenefit(0)).toEqual({
-      estimatedGoodsValue: 0,
+      estimatedGiftsValue: 0,
       estimatedShippingCost: 0,
       estimatedEconomicBenefit: 0,
     });
     expect(estimateFurusatoEconomicBenefit(-10_000)).toEqual({
-      estimatedGoodsValue: 0,
+      estimatedGiftsValue: 0,
       estimatedShippingCost: 0,
       estimatedEconomicBenefit: 0,
     });
   });
 
-  it('estimates goods (26.5%) and shipping (5.7%) and reconciles total economic benefit', () => {
+  it('estimates gifts (26.5%) and shipping (5.7%) and reconciles total economic benefit', () => {
     const benefit = estimateFurusatoEconomicBenefit(60_000);
 
-    expect(benefit.estimatedGoodsValue).toBe(15_900);
+    expect(benefit.estimatedGiftsValue).toBe(15_900);
     expect(benefit.estimatedShippingCost).toBe(3_420);
     expect(benefit.estimatedEconomicBenefit).toBe(19_320);
-    expect(benefit.estimatedGoodsValue + benefit.estimatedShippingCost).toBe(
+    expect(benefit.estimatedGiftsValue + benefit.estimatedShippingCost).toBe(
       benefit.estimatedEconomicBenefit,
     );
   });

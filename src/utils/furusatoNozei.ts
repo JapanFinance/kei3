@@ -46,10 +46,10 @@ export const hasHighOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): boo
 
 export interface FurusatoEconomicBenefitEstimate {
   /** Estimated procurement value of return gifts (26.5% of donation limit). */
-  estimatedGoodsValue: number;
+  estimatedGiftsValue: number;
   /** Estimated shipping/delivery cost of return gifts (5.7% of donation limit). */
   estimatedShippingCost: number;
-  /** Combined estimated economic benefit (goods + shipping = 32.2%). */
+  /** Combined estimated economic benefit (gifts + shipping = 32.2%). */
   estimatedEconomicBenefit: number;
 }
 
@@ -79,20 +79,20 @@ export interface FurusatoTemporaryIncomeEstimate extends FurusatoEconomicBenefit
 export const estimateFurusatoEconomicBenefit = (limit: number): FurusatoEconomicBenefitEstimate => {
   if (limit <= 0 || !Number.isFinite(limit)) {
     return {
-      estimatedGoodsValue: 0,
+      estimatedGiftsValue: 0,
       estimatedShippingCost: 0,
       estimatedEconomicBenefit: 0,
     };
   }
 
-  const estimatedGoodsValue = Math.round(limit * FURUSATO_AVERAGE_GIFT_COST_RATE.toDecimal());
+  const estimatedGiftsValue = Math.round(limit * FURUSATO_AVERAGE_GIFT_COST_RATE.toDecimal());
   const estimatedShippingCost = Math.round(limit * FURUSATO_AVERAGE_SHIPPING_COST_RATE.toDecimal());
 
   return {
-    estimatedGoodsValue,
+    estimatedGiftsValue,
     estimatedShippingCost,
     // Sum the rounded components so displayed breakdown rows always reconcile exactly.
-    estimatedEconomicBenefit: estimatedGoodsValue + estimatedShippingCost,
+    estimatedEconomicBenefit: estimatedGiftsValue + estimatedShippingCost,
   };
 };
 

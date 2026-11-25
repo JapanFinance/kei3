@@ -451,7 +451,7 @@ describe('FurusatoNozeiTab Tax on Gift Temporary Income Disclosure', () => {
 
     expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
     const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
-    expect(within(details).getByText('Gifts received (26.5%)')).toBeInTheDocument();
+    expect(within(details).getByText('Value of gifts received (26.5%)')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥15,900')).toBeInTheDocument();
     expect(within(details).getByText('Estimated shipping (5.7%)')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥3,420')).toBeInTheDocument();
@@ -504,7 +504,7 @@ describe('FurusatoNozeiTab Tax on Gift Temporary Income Disclosure', () => {
     expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
 
     const details = document.getElementById(toggleButton.getAttribute('aria-controls')!)!;
-    expect(within(details).getByText('Gifts received (26.5%)')).toBeInTheDocument();
+    expect(within(details).getByText('Value of gifts received (26.5%)')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥583,000')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥125,400')).toBeInTheDocument();
     expect(within(details).getByText('≈ ¥708,400')).toBeInTheDocument();

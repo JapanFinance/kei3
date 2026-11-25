@@ -11,7 +11,6 @@ import {
   FURUSATO_AVERAGE_GIFT_COST_RATE,
   FURUSATO_AVERAGE_SHIPPING_COST_RATE,
   FURUSATO_SOURCES,
-  TEMPORARY_INCOME_SPECIAL_DEDUCTION,
 } from '../../../data/furusatoNozei';
 import { formatJPY } from '../../../utils/formatters';
 import type { FurusatoTemporaryIncomeEstimate } from '../../../utils/furusatoNozei';
@@ -26,7 +25,7 @@ interface FurusatoTemporaryIncomeTooltipProps {
 export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeTooltipProps> = ({
   estimate,
 }) => {
-  const goodsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
+  const giftsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
   const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
   const combinedPct = FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE.toPercent(1);
 
@@ -55,15 +54,9 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
           deducted from the economic benefit, whereas municipalities that contract and pay delivery
           separately typically exclude shipping from their reported procurement cost. Because
           donor-side advance estimates cannot know each municipality's contracting method, this
-          estimate uses FY2025 MIC nationwide averages ({goodsPct} goods + {shippingPct} shipping ={' '}
+          estimate uses FY2025 MIC nationwide averages ({giftsPct} gifts + {shippingPct} shipping ={' '}
           {combinedPct} combined) as a conservative upper-side estimate; actual amounts depend on
           each municipality's valuation.
-        </Typography>
-        <Typography variant="body2" sx={{ mb: 1 }}>
-          <strong>Special Deduction (特別控除):</strong> An annual{' '}
-          {formatJPY(TEMPORARY_INCOME_SPECIAL_DEDUCTION)} deduction applies across all temporary
-          income combined in the calendar year (such as insurance maturity payouts or prizes). Half
-          (½) of any excess is added to aggregate taxable income (総所得金額).
         </Typography>
         <Typography variant="body2" sx={{ mb: estimate.additionalTotalTax > 0 ? 1 : 0 }}>
           <strong>Delivery Year & Filing:</strong> Return gifts are recognized in the calendar year
