@@ -305,11 +305,6 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               'Tax on Temporary Income'
             )
           }
-          sublabel={
-            tempIncome.isTaxable
-              ? `Exceeds ¥500,000 deduction (≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)} est. benefit)`
-              : `Under ¥500,000 deduction (≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)} est. benefit)`
-          }
           disclosure={{
             expanded: showTemporaryIncomeDetails,
             onToggle: () => setShowTemporaryIncomeDetails(open => !open),

@@ -443,9 +443,7 @@ describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
       name: /Tax on Temporary Income/,
     });
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
-    expect(
-      screen.getByText('Under ¥500,000 deduction (≈ ¥19,320 est. benefit)'),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/est\. benefit/)).not.toBeInTheDocument();
     expect(screen.getByText('¥0')).toBeInTheDocument();
     expect(screen.queryByText('Estimated shipping (5.7%)')).not.toBeInTheDocument();
 
@@ -485,9 +483,7 @@ describe('FurusatoNozeiTab Tax on Temporary Income Disclosure', () => {
       name: /Tax on Temporary Income/,
     });
     expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
-    expect(
-      screen.getByText('Exceeds ¥500,000 deduction (≈ ¥708,400 est. benefit)'),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/est\. benefit/)).not.toBeInTheDocument();
     expect(screen.queryByText('Estimated shipping (5.7%)')).not.toBeInTheDocument();
 
     // Tooltip trigger uses the amber warning icon directly (no separate info icon beside it)
