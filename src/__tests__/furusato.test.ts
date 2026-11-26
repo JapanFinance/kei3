@@ -13,10 +13,10 @@ import { makeDependent, makeSpouse } from './fixtures/dependents';
 describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the default salary', () => {
     const fn = calculateFNForIncome(5_000_000);
-    expect(fn.limit).toBe(61_000);
-    expect(fn.outOfPocketCost).toBe(5_000);
-    expect(fn.incomeTaxReduction).toBe(3_000);
-    expect(fn.residenceTaxReduction).toBe(53_000);
+    expect(fn.limit).toBe(58_000);
+    expect(fn.outOfPocketCost).toBe(2_000);
+    expect(fn.incomeTaxReduction).toBe(2_900);
+    expect(fn.residenceTaxReduction).toBe(53_100);
   });
 
   it('calculates furusato nozei for the salary with lower out-of-pocket cost', () => {
@@ -35,20 +35,20 @@ describe('calculateFurusatoNozeiLimit', () => {
     expect(fn.residenceTaxReduction).toBe(118_700);
   });
 
-  it('high-income salary, high out-of-pocket cost', () => {
+  it('high-income salary matches 23% bracket with basic deduction adjustment', () => {
     const fn = calculateFNForIncome(13_000_000);
-    expect(fn.outOfPocketCost).toBe(35_100);
-    expect(fn.limit).toBe(327_000);
-    expect(fn.incomeTaxReduction).toBe(76_400);
-    expect(fn.residenceTaxReduction).toBe(215_500);
+    expect(fn.outOfPocketCost).toBe(1_900);
+    expect(fn.limit).toBe(277_000);
+    expect(fn.incomeTaxReduction).toBe(64_600);
+    expect(fn.residenceTaxReduction).toBe(210_500);
   });
 
-  it('mid range salary, high out-of-pocket cost', () => {
+  it('mid range salary matches 10% bracket with basic deduction adjustment', () => {
     const fn = calculateFNForIncome(6_500_000);
-    expect(fn.limit).toBe(98_000);
-    expect(fn.outOfPocketCost).toBe(11_800);
-    expect(fn.incomeTaxReduction).toBe(9_800);
-    expect(fn.residenceTaxReduction).toBe(76_400);
+    expect(fn.limit).toBe(86_000);
+    expect(fn.outOfPocketCost).toBe(2_000);
+    expect(fn.incomeTaxReduction).toBe(8_600);
+    expect(fn.residenceTaxReduction).toBe(75_400);
   });
 
   it('returns 0 for zero or negative taxable income', () => {
@@ -73,8 +73,8 @@ describe('calculateFurusatoNozeiLimit', () => {
     const fnWithoutDC = calculateFNForIncome(5_000_000);
 
     expect(fn.limit).toBeLessThan(fnWithoutDC.limit);
-    expect(fn.limit).toBe(55_000);
-    expect(fn.outOfPocketCost).toBe(4_700);
+    expect(fn.limit).toBe(52_000);
+    expect(fn.outOfPocketCost).toBe(2_100);
   });
 
   describe('home loan tax credit (住宅ローン控除) interactions', () => {
@@ -522,7 +522,7 @@ describe('calculateFurusatoNozeiLimit', () => {
   });
 
   it('furusato nozei limit is affected by manual social insurance override', () => {
-    // Standard calculation for 5M income has limit of 60,000
+    // Standard calculation for 5M income has limit of 58,000
     // If we increase social insurance deduction manually, taxable income decreases, so limit should decrease
     const fnWithHighSocialInsurance = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -533,11 +533,11 @@ describe('calculateFurusatoNozeiLimit', () => {
       dependents: [],
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
-      manualSocialInsuranceAmount: 1_000_000, // Higher than standard ~726k
+      manualSocialInsuranceAmount: 1_000_000, // Higher than standard ~722k
       incomeYear: 2026,
     }).furusatoNozei;
 
-    expect(fnWithHighSocialInsurance.limit).toBeLessThan(62_000);
+    expect(fnWithHighSocialInsurance.limit).toBeLessThan(58_000);
 
     // If we decrease social insurance deduction manually, taxable income increases, so limit should increase
     const fnWithLowSocialInsurance = calculateTaxes({
@@ -549,11 +549,11 @@ describe('calculateFurusatoNozeiLimit', () => {
       dependents: [],
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
-      manualSocialInsuranceAmount: 500_000, // Lower than standard ~726k
+      manualSocialInsuranceAmount: 500_000, // Lower than standard ~722k
       incomeYear: 2026,
     }).furusatoNozei;
 
-    expect(fnWithLowSocialInsurance.limit).toBeGreaterThan(62_000);
+    expect(fnWithLowSocialInsurance.limit).toBeGreaterThan(58_000);
   });
 
   describe('direct furusatoDonation input in calculateTaxes', () => {
@@ -614,7 +614,7 @@ describe('calculateFurusatoNozeiLimit', () => {
 
     it('caps the special deduction at 20% of 所得割 when donation exceeds the optimal limit', () => {
       const baseline = calculateTaxes(baseInputs);
-      // Donate 100,000 yen, exceeding the optimal limit (61,000 yen) where the 20% cap binds
+      // Donate 100,000 yen, exceeding the optimal limit (58,000 yen) where the 20% cap binds
       const withExcessDonation = calculateTaxes({
         ...baseInputs,
         furusatoDonation: 100_000,
@@ -647,7 +647,12 @@ describe('calculateFurusatoNozeiLimit', () => {
         incomeYear: 2026,
       });
 
-      const credits = calculateFurusatoResidenceCredit(2000, baseline.residenceTax, 2026);
+      const credits = calculateFurusatoResidenceCredit(
+        2000,
+        baseline.residenceTax,
+        2026,
+        baseline.nationalIncomeTaxBasicDeduction!,
+      );
       expect(credits).toEqual({
         residenceTaxDonationBasicDeduction: 0,
         residenceTaxSpecialDeduction: 0,
@@ -670,12 +675,18 @@ describe('calculateFurusatoNozeiLimit', () => {
         incomeYear: 2026,
       });
 
-      const credits = calculateFurusatoResidenceCredit(50_000, baseline.residenceTax, 2026);
+      const credits = calculateFurusatoResidenceCredit(
+        50_000,
+        baseline.residenceTax,
+        2026,
+        baseline.nationalIncomeTaxBasicDeduction!,
+      );
       // Basic deduction is 10% of (50,000 - 2,000) = 4,800 yen
+      // Special deduction is 84.895% of 48,000 = 40,749.6 yen (city ceil 24,450 + pref ceil 16,300 = 40,750)
       expect(credits.residenceTaxDonationBasicDeduction).toBe(4_800);
-      expect(credits.residenceTaxSpecialDeduction).toBe(38_300);
-      expect(credits.city).toBe(25_860);
-      expect(credits.prefecture).toBe(17_240);
+      expect(credits.residenceTaxSpecialDeduction).toBe(40_750);
+      expect(credits.city).toBe(27_330);
+      expect(credits.prefecture).toBe(18_220);
     });
 
     it('caps special deduction at 20% of pre-credit 所得割 for donations above limit', () => {
@@ -693,7 +704,12 @@ describe('calculateFurusatoNozeiLimit', () => {
       });
 
       // 所得割 = 243,100 - 5,000 = 238,100. 20% cap = 47,620 yen.
-      const credits = calculateFurusatoResidenceCredit(100_000, baseline.residenceTax, 2026);
+      const credits = calculateFurusatoResidenceCredit(
+        100_000,
+        baseline.residenceTax,
+        2026,
+        baseline.nationalIncomeTaxBasicDeduction!,
+      );
       expect(credits.residenceTaxSpecialDeduction).toBe(47_620);
       expect(credits.residenceTaxDonationBasicDeduction).toBe(9_800);
       expect(credits.city).toBe(34_452);

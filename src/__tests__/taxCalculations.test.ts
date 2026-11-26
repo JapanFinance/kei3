@@ -4845,12 +4845,13 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     const result = calculateTaxes(salaryInputs([reportedDividends(1_000_000)]));
 
     // 所得割 172,900 + 115,200 = 288,100 is the cap base (附則第33条の2第3項第4号); 20% = 57,620.
-    // 特例控除割合 for 課税総所得金額 2,407,000 − 50,000 人的控除差 in the 10% band: 1 − 0.1 −
-    // 0.1021 = 0.7979; 57,620 / 0.7979 + 2,000 = 74,214 → 74,000 (61,000 without the dividends).
-    expect(result.furusatoNozei.limit).toBe(74_000);
-    // The 72,000 寄附金控除 comes off 課税総所得金額 (1,797,748 → 1,725,000 → 86,250) and leaves
-    // the 15% class alone: (239,850 − 236,250) × 1.021 at the ¥100 floor is 244,800 − 241,200.
-    expect(result.furusatoNozei.incomeTaxReduction).toBe(3_600);
+    // 特例控除割合 for 課税総所得金額 2,407,000 − (50,000 + 560,000) 人的控除差調整額 = 1,797,000
+    // in the 5% band: 1 − 0.1 − 0.05105 = 0.84895; 57,620 / 0.84895 + 2,000 = 69,872 → 69,000
+    // (58,000 without the dividends).
+    expect(result.furusatoNozei.limit).toBe(69_000);
+    // The 67,000 寄附金控除 comes off 課税総所得金額 (1,797,748 → 1,730,000 → 86,500) and leaves
+    // the 15% class alone: (239,850 − 236,500) × 1.021 at the ¥100 floor is 244,800 − 241,400.
+    expect(result.furusatoNozei.incomeTaxReduction).toBe(3_400);
   });
 
   it('counts the reported income toward the NHI premium, like any other 所得', () => {
@@ -5221,9 +5222,10 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
     expect(result.residenceTax.separate).toBeUndefined();
     expect(result.residenceTax.totalResidenceTax).toBe(343_100);
     expect(result.takeHomeIncome).toBe(6_000_000 - 186_000 - 343_100 - 722_252);
-    // Furusato: 所得割 338,100 × 20% = 67,620; 3,407,000 − 50,000 人的控除差 is in the 20% band, so
-    // the 特例控除割合 is 1 − 0.1 − 0.2 × 1.021 = 0.6958; 67,620 / 0.6958 + 2,000 = 99,183 → 99,000.
-    expect(result.furusatoNozei.limit).toBe(99_000);
+    // Furusato: 所得割 338,100 × 20% = 67,620; 3,407,000 − (50,000 + 560,000) 人的控除差調整額
+    // = 2,797,000 is in the 10% band, so the 特例控除割合 is 1 − 0.1 − 0.1 × 1.021 = 0.7979;
+    // 67,620 / 0.7979 + 2,000 = 86,747 → 86,000.
+    expect(result.furusatoNozei.limit).toBe(86_000);
   });
 
   it('moves the 基礎控除 tier when they carry 合計所得金額 past 4,890,000', () => {
@@ -5472,23 +5474,23 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     });
 
     it('applies the residence credit after the furusato donation credits', () => {
-      // Limit as without the foreign tax (74,000; the 20% cap is on the 所得割 before either
+      // Limit as without the foreign tax (69,000; the 20% cap is on the 所得割 before either
       // credit). A donation lowers the base tax, which also lowers the foreign tax credit limit:
-      // national income tax falls from 191,100 to 188,300 (a 2,800 net reduction, losing 800 of FTC),
-      // and residence tax falls from 277,300 to 213,000 (a 64,300 net reduction, losing 300 of FTC).
-      // Out-of-pocket cost is 74,000 − 64,300 − 2,800 = 6,900.
+      // national income tax falls from 191,100 to 188,500 (a 2,600 net reduction), and residence
+      // tax falls from 277,300 to 214,000 (a 63,300 net reduction).
+      // Out-of-pocket cost is 69,000 − 63,300 − 2,600 = 3,100.
       expect(result.furusatoNozei).toEqual({
-        limit: 74_000,
-        incomeTaxReduction: 2_800,
-        residenceTaxDonationBasicDeduction: 7_200,
-        residenceTaxSpecialDeduction: 57_450,
-        residenceTaxReduction: 64_300,
-        outOfPocketCost: 6_900,
+        limit: 69_000,
+        incomeTaxReduction: 2_600,
+        residenceTaxDonationBasicDeduction: 6_700,
+        residenceTaxSpecialDeduction: 56_880,
+        residenceTaxReduction: 63_300,
+        outOfPocketCost: 3_100,
       });
       expect(
         calculateTaxes(salaryInputs([{ ...foreignDividend(true), foreignTax: 0 }])).furusatoNozei
           .residenceTaxReduction,
-      ).toBe(64_600);
+      ).toBe(63_600);
     });
 
     it('credits nothing more once every limit is used (case A plus 5,000 paid with a return)', () => {

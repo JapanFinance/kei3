@@ -1456,7 +1456,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       : undefined;
   const furusatoResidenceCredit =
     furusatoDonationAmount > 0
-      ? calculateFurusatoResidenceCredit(furusatoDonationAmount, preCreditResidenceTax, incomeYear)
+      ? calculateFurusatoResidenceCredit(
+          furusatoDonationAmount,
+          preCreditResidenceTax,
+          incomeYear,
+          nationalIncomeTaxBasicDeduction,
+        )
       : undefined;
   const furusatoCreditsApplicable =
     furusatoResidenceCredit &&
@@ -1530,6 +1535,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const furusatoLimit = calculateFurusatoLimit(
       nationalTaxableClasses.aggregate,
       preCreditResidenceTax,
+      nationalIncomeTaxBasicDeduction,
       hasSeparateReportedInvestment
         ? {
             nationalTaxable: {

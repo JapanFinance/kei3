@@ -8,6 +8,7 @@ import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDe
 import type { DependentDeductionResults, Dependent } from '../types/dependents';
 import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
+  calculateFurusatoAdjustedTaxableIncome,
   calculateResidenceTax,
   CITY_RESIDENCE_TAX_RATE,
   CITY_TAX_PROPORTION,
@@ -771,5 +772,60 @@ describe('getSpecialDeductionMultiplier (特例控除割合)', () => {
         percent3(74.685),
       ),
     ).toBe(true);
+  });
+
+  it('switches to separateNationalRate when basic deduction adjustment pushes adjusted taxable income negative', () => {
+    // taxableIncome 200,000 − (50,000 + (1,040,000 − 480,000)) = −410,000 < 0
+    const separateNationalRate = percent3(15);
+
+    expect(
+      getSpecialDeductionMultiplier(200_000, 50_000, separateNationalRate, 1_040_000).equals(
+        percent3(74.685),
+      ),
+    ).toBe(true);
+  });
+
+  it('matches the Kawasaki City FY2026 official worked example (5% band after basic deduction adjustment)', () => {
+    // Kawasaki City PDF (寄附金税額控除の計算方法（令和8年度以降）, p. 3):
+    // 課税総所得金額 2,065,000 − 人的控除額差額 100,000 − (680,000 − 480,000) = 1,765,000 (5% band → 84.895%)
+    const adjusted = calculateFurusatoAdjustedTaxableIncome(2_065_000, 100_000, 680_000);
+    const ratio = getSpecialDeductionMultiplier(2_065_000, 100_000, undefined, 680_000);
+
+    expect(adjusted).toBe(1_765_000);
+    expect(ratio.equals(percent3(84.895))).toBe(true);
+    // Without the basic deduction adjustment, 2,065,000 − 100,000 = 1,965,000 would sit in the 10% band.
+    expect(
+      getSpecialDeductionMultiplier(2_065_000, 100_000, undefined).equals(percent3(79.79)),
+    ).toBe(true);
+  });
+
+  it('matches the Hiroshima City official worked example (人的控除差調整額 = 250,000)', () => {
+    // Hiroshima City guidance: 給与収入700万円 couple (2025 basic deduction 630,000),
+    // 課税総所得金額 4,440,000, 人的控除額差額 100,000 (50k basic + 50k spouse),
+    // 人的控除差調整額 = 100,000 + (630,000 − 480,000) = 250,000 → 4,440,000 − 250,000 = 4,190,000 (20% band → 69.58%)
+    const adjusted = calculateFurusatoAdjustedTaxableIncome(4_440_000, 100_000, 630_000);
+    const ratio = getSpecialDeductionMultiplier(4_440_000, 100_000, undefined, 630_000);
+
+    expect(adjusted).toBe(4_190_000);
+    expect(ratio.equals(percent3(69.58))).toBe(true);
+  });
+
+  it('applies the 2026 ¥1,040,000 national basic deduction adjustment at ¥5M salary', () => {
+    // Single 2026 Tokyo salaried earner at ¥5,000,000:
+    // 課税総所得金額 2,407,000 − (50,000 + (1,040,000 − 480,000)) = 1,797,000 (5% band → 84.895%)
+    const adjusted = calculateFurusatoAdjustedTaxableIncome(2_407_000, 50_000, 1_040_000);
+    const ratio = getSpecialDeductionMultiplier(2_407_000, 50_000, undefined, 1_040_000);
+
+    expect(adjusted).toBe(1_797_000);
+    expect(ratio.equals(percent3(84.895))).toBe(true);
+  });
+
+  it('clamps basic deduction adjustment at zero when nationalBasicDeduction is 480,000 or less', () => {
+    // High-income phase-down tiers (48万 / 32万 / 16万 / 0) never produce a negative adjustment.
+    for (const nationalBasicDeduction of [480_000, 320_000, 160_000, 0]) {
+      expect(
+        calculateFurusatoAdjustedTaxableIncome(20_000_000, 50_000, nationalBasicDeduction),
+      ).toBe(19_950_000);
+    }
   });
 });

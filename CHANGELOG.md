@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-11-27: Fix Furusato Nozei limit for 2026 basic deduction increase
+
+### Fixed
+
+- Fixed the Furusato Nozei special deduction rate ([特例控除割合](https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_7)) calculation to include the national basic deduction increase above ¥480,000 (`max(0, national basic deduction − ¥480,000)`) in the personal deduction difference adjustment (人的控除差調整額), as required by Local Tax Act Arts. 37-2(11)(i), 314-7(11)(i), and Suppl. Art. 7-2(2)/(5). Previously, 2026 taxpayers whose taxable income sat just below a national income tax bracket boundary (`¥1,950,000`, `¥3,300,000`, `¥6,950,000`, `¥9,000,000`, or `¥18,000,000`) were evaluated in the next higher bracket with too low a special deduction rate, overstating their optimal Furusato Nozei limit and causing false high out-of-pocket cost warnings. For a single Tokyo salaried earner (age 20–39) in 2026, limits were overstated by ¥3,000–¥4,000 around ¥4.40M–¥5.25M (e.g., ¥61,000 → ¥58,000 at ¥5.00M), ¥12,000–¥13,000 around ¥6.45M–¥6.70M (e.g., ¥98,000 → ¥86,000 at ¥6.50M), ¥9,000–¥10,000 around ¥10.70M–¥10.80M, ¥49,000–¥50,000 around ¥12.90M–¥13.00M (e.g., ¥327,000 → ¥277,000 at ¥13.00M), and ¥93,000–¥94,000 around ¥22.10M–¥22.20M.
+
 ## 2026-11-24: Re-design "What's New" dialog
 
 ### Updated
