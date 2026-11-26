@@ -2,15 +2,13 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-11-27: Furusato Nozei temporary income estimate, tab redesign, and basic deduction fix
+## 2026-11-28: Furusato Nozei temporary income estimate and tab redesign
 
 ### New
 
-- Added a collapsible temporary income ([一時所得](https://www.nta.go.jp/law/shitsugi/shotoku/02/37.htm)) tax breakdown directly inside Cost Breakdown (at limit) on the Furusato Nozei tab for return gifts, including delivery/shipping costs (5.7% per the MIC FY2025 survey, matching [National Tax Tribunal](https://www.kfs.go.jp/service/JP/126/02/index.html) and court valuation rulings). When the estimated economic benefit exceeds the ¥500,000 special deduction, the tax engine computes the resulting income and residence tax on the ½ taxable temporary income, adds it into Out-of-Pocket Cost, and explains it in the High Out-of-Pocket Cost warning (suppressing inapplicable One-Stop Exception advice).
+- Added Temporary Income ([一時所得](https://www.nta.go.jp/law/shitsugi/shotoku/02/37.htm)) tax breakdown in the Furusato Nozei tab for return gifts. When the estimated economic benefit of gifts exceeds the ¥500,000 special deduction for temporary income, the resulting income and residence tax on the temporary income is shown in the Cost Breakdown.
 
-### Updated
-
-- Redesigned the Furusato Nozei tab so Cost Breakdown (at limit) shows Donation Amount with negative Income Tax Reduction and collapsible Residence Tax Reduction rows summing directly to Out-of-Pocket Cost, and moved the Value of Gifts Received explanation from a footnote to an inline tooltip.
+## 2026-11-27: Fix Furusato Nozei limit for 2026 basic deduction increase
 
 ### Fixed
 
