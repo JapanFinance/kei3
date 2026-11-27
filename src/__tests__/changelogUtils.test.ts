@@ -63,7 +63,140 @@ describe('parseChangelog', () => {
 
     const parsed = parseChangelog(md);
 
-    expect(parsed.entries[0]?.sections.new).toEqual(['First item.', 'Second item.']);
+    expect(parsed.entries[0]?.sections.new).toEqual([
+      {
+        type: 'list',
+        items: [{ text: 'First item.' }, { text: 'Second item.' }],
+      },
+    ]);
+  });
+
+  it('parses multi-level nested bullet lists and returns cleanly to parent or root levels', () => {
+    const md = `
+## 2026-11-27: Nested bullets
+
+### New
+
+- Root A
+  - Child A1
+    - Grandchild A1a
+  - Child A2
+- Root B
+`;
+
+    const parsed = parseChangelog(md);
+
+    expect(parsed.entries[0]?.sections.new).toEqual([
+      {
+        type: 'list',
+        items: [
+          {
+            text: 'Root A',
+            children: [
+              {
+                text: 'Child A1',
+                children: [{ text: 'Grandchild A1a' }],
+              },
+              { text: 'Child A2' },
+            ],
+          },
+          { text: 'Root B' },
+        ],
+      },
+    ]);
+  });
+
+  it('parses GFM pipe tables with alignments, escaped pipes, row normalization, and interleaved lists', () => {
+    const md = `
+## 2026-11-27: Table release
+
+### Fixed
+
+- Intro item.
+
+| Range | Impact | Notes |
+| --- | ---: | :---: |
+| ¥4.40M–¥5.25M | ¥3,000 | Escaped \\| pipe |
+| ¥6.45M–¥6.70M | ¥12,000 |
+
+- Follow-up item.
+`;
+
+    const parsed = parseChangelog(md);
+
+    expect(parsed.entries[0]?.sections.fixed).toEqual([
+      {
+        type: 'list',
+        items: [{ text: 'Intro item.' }],
+      },
+      {
+        type: 'table',
+        headers: ['Range', 'Impact', 'Notes'],
+        alignments: ['left', 'right', 'center'],
+        rows: [
+          ['¥4.40M–¥5.25M', '¥3,000', 'Escaped | pipe'],
+          ['¥6.45M–¥6.70M', '¥12,000', ''],
+        ],
+      },
+      {
+        type: 'list',
+        items: [{ text: 'Follow-up item.' }],
+      },
+    ]);
+  });
+
+  it('parses plain paragraphs separated by blank lines and joins wrapped lines', () => {
+    const md = `
+## 2026-11-27: Paragraph release
+
+### Fixed
+
+First line of paragraph one
+continued on the next line.
+
+Second standalone paragraph.
+`;
+
+    const parsed = parseChangelog(md);
+
+    expect(parsed.entries[0]?.sections.fixed).toEqual([
+      {
+        type: 'paragraph',
+        text: 'First line of paragraph one continued on the next line.',
+      },
+      {
+        type: 'paragraph',
+        text: 'Second standalone paragraph.',
+      },
+    ]);
+  });
+
+  it('does not parse malformed pipe lines as a table block', () => {
+    const md = `
+## 2026-11-27: Pipe edge cases
+
+### Updated
+
+- Valid bullet.
+| Not | A | Table |
+| --- | --- |
+| Still | Not | Table |
+`;
+
+    const parsed = parseChangelog(md);
+    const blocks = parsed.entries[0]?.sections.updated ?? [];
+
+    expect(blocks.some(block => block.type === 'table')).toBe(false);
+    expect(blocks).toEqual([
+      {
+        type: 'list',
+        items: [{ text: 'Valid bullet.' }],
+      },
+      {
+        type: 'paragraph',
+        text: '| Not | A | Table | | --- | --- | | Still | Not | Table |',
+      },
+    ]);
   });
 });
 
@@ -125,7 +258,7 @@ describe('getChangelogEntryTitle', () => {
     const entry: ChangelogEntry = {
       date: '2026-11-23',
       title: 'Custom Release Title',
-      sections: { updated: ['Long description here.'] },
+      sections: { updated: [{ type: 'list', items: [{ text: 'Long description here.' }] }] },
     };
 
     expect(getChangelogEntryTitle(entry)).toBe('Custom Release Title');
@@ -136,21 +269,47 @@ describe('getChangelogEntryTitle', () => {
       date: '2026-11-23',
       sections: {
         updated: [
-          'Updated ratio from 25.2% to 26.5% per [MIC](https://example.com). Extra details follow.',
+          {
+            type: 'list',
+            items: [
+              {
+                text: 'Updated ratio from 25.2% to 26.5% per [MIC](https://example.com). Extra details follow.',
+              },
+            ],
+          },
         ],
       },
     };
 
     expect(getChangelogEntryTitle(entry)).toBe('Updated ratio from 25.2% to 26.5% per MIC');
   });
+
+  it('derives a fallback title from a leading paragraph block', () => {
+    const entry: ChangelogEntry = {
+      date: '2026-11-27',
+      sections: {
+        fixed: [
+          {
+            type: 'paragraph',
+            text: 'Fixed **Furusato Nozei** limit calculation. Second sentence.',
+          },
+        ],
+      },
+    };
+
+    expect(getChangelogEntryTitle(entry)).toBe('Fixed Furusato Nozei limit calculation');
+  });
 });
 
 describe('splitChangelogEntries', () => {
   const sampleEntries: ChangelogEntry[] = [
-    { date: '2026-11-23', sections: { updated: ['Newest'] } },
-    { date: '2026-11-22', sections: { updated: ['Second newest'] } },
-    { date: '2026-11-05', sections: { new: ['Older'] } },
-    { date: '2026-10-25', sections: { fixed: ['Oldest'] } },
+    { date: '2026-11-23', sections: { updated: [{ type: 'list', items: [{ text: 'Newest' }] }] } },
+    {
+      date: '2026-11-22',
+      sections: { updated: [{ type: 'list', items: [{ text: 'Second newest' }] }] },
+    },
+    { date: '2026-11-05', sections: { new: [{ type: 'list', items: [{ text: 'Older' }] }] } },
+    { date: '2026-10-25', sections: { fixed: [{ type: 'list', items: [{ text: 'Oldest' }] }] } },
   ];
 
   it('places entries newer than previousLastViewedDate into recent with hasUnread true', () => {
@@ -183,8 +342,27 @@ describe('getChangelogEntryCategories and matchesChangelogFilter', () => {
     date: '2026-10-24',
     title: 'National Pension exemption and NHI reductions',
     sections: {
-      new: ['Added toggle for [国民年金保険料の全額免除](https://www.nenkin.go.jp/).'],
-      fixed: ['Applied low-income reduction.'],
+      new: [
+        {
+          type: 'list',
+          items: [
+            {
+              text: 'Added toggle for [国民年金保険料の全額免除](https://www.nenkin.go.jp/).',
+              children: [{ text: 'Nested child detail with **threshold** info.' }],
+            },
+          ],
+        },
+      ],
+      fixed: [
+        { type: 'paragraph', text: 'Standalone paragraph about adjustment credit.' },
+        { type: 'list', items: [{ text: 'Applied low-income reduction.' }] },
+        {
+          type: 'table',
+          headers: ['Salary range', 'Impact'],
+          alignments: ['left', 'right'],
+          rows: [['¥4.40M–¥5.25M', '[Details](https://example.com/details)']],
+        },
+      ],
     },
   };
 
@@ -192,12 +370,18 @@ describe('getChangelogEntryCategories and matchesChangelogFilter', () => {
     expect(getChangelogEntryCategories(entry)).toEqual(['new', 'fixed']);
   });
 
-  it('filters by category, title, plain text, Japanese terms, and formatted date', () => {
+  it('filters by category, title, paragraphs, nested bullets, table cells, and formatted date', () => {
     expect(matchesChangelogFilter(entry, 'all', '')).toBe(true);
     expect(matchesChangelogFilter(entry, 'updated', '')).toBe(false);
     expect(matchesChangelogFilter(entry, 'new', '全額免除')).toBe(true);
+    expect(matchesChangelogFilter(entry, 'new', 'nested child detail')).toBe(true);
     expect(matchesChangelogFilter(entry, 'fixed', '全額免除')).toBe(false);
+    expect(matchesChangelogFilter(entry, 'fixed', 'adjustment credit')).toBe(true);
+    expect(matchesChangelogFilter(entry, 'fixed', 'salary range')).toBe(true);
+    expect(matchesChangelogFilter(entry, 'fixed', '¥4.40m')).toBe(true);
+    expect(matchesChangelogFilter(entry, 'fixed', 'details')).toBe(true);
     expect(matchesChangelogFilter(entry, 'all', 'oct 24, 2026')).toBe(true);
     expect(matchesChangelogFilter(entry, 'all', 'nenkin.go.jp')).toBe(false);
+    expect(matchesChangelogFilter(entry, 'fixed', 'example.com')).toBe(false);
   });
 });
