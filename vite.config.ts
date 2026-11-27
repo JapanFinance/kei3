@@ -325,6 +325,10 @@ export default defineConfig(({ mode }) => ({
     chunkImportMap: true,
     sourcemap: true,
     rolldownOptions: {
+      // Emit Rolldown's Markdown/JSON build report to
+      // node_modules/.rolldown/report/dist/ only in analyze mode so default
+      // builds stay free of report-collection overhead.
+      ...(mode === 'analyze' ? { devtools: { mode: 'report' as const } } : {}),
       output: {
         codeSplitting,
       },
