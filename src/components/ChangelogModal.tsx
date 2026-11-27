@@ -174,7 +174,6 @@ function ChangelogList({ items, depth = 0 }: { items: ChangelogListItem[]; depth
         flexDirection: 'column',
         gap: depth > 0 ? 0.5 : 0.75,
         color: 'text.primary',
-        maxWidth: '68ch',
       }}
     >
       {items.map((item, idx) => (
@@ -310,10 +309,7 @@ export function EntryBody({
             )}
 
             {isSingleFlatBullet && firstBlock.items[0] ? (
-              <Typography
-                variant="body2"
-                sx={{ color: 'text.primary', lineHeight: 1.65, maxWidth: '68ch' }}
-              >
+              <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.65 }}>
                 {renderInlineTokens(firstBlock.items[0].text)}
               </Typography>
             ) : (
@@ -325,7 +321,7 @@ export function EntryBody({
                         <Typography
                           key={idx}
                           variant="body2"
-                          sx={{ color: 'text.primary', lineHeight: 1.65, maxWidth: '68ch' }}
+                          sx={{ color: 'text.primary', lineHeight: 1.65 }}
                         >
                           {renderInlineTokens(block.text)}
                         </Typography>
