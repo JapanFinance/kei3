@@ -175,19 +175,15 @@ describe('ChangelogModal', () => {
     const entryEl = document.getElementById('changelog-entry-2026-11-27');
     expect(entryEl).not.toBeNull();
     expect(entryEl!.querySelectorAll('ul')).toHaveLength(0);
-    expect(
-      within(entryEl!).getByText(/Impact on a single Tokyo salaried earner/i),
-    ).toBeInTheDocument();
+    expect(within(entryEl!).getByText(/Impact on the Furusato Nozei limit/i)).toBeInTheDocument();
 
     const table = within(entryEl!).getByRole('table');
     expect(within(table).getByRole('columnheader', { name: 'Salary range' })).toBeVisible();
-    expect(within(table).getByRole('cell', { name: '¥4.40M–¥5.25M' })).toBeVisible();
-    expect(
-      within(table).getByRole('cell', { name: '¥327,000 → ¥277,000 at ¥13.00M' }),
-    ).toBeVisible();
+    expect(within(table).getByRole('cell', { name: '¥4.4M–¥5.25M' })).toBeVisible();
+    expect(within(table).getByRole('cell', { name: '¥327,000 → ¥277,000 at ¥13M' })).toBeVisible();
 
     const searchInput = screen.getByLabelText('Search updates');
-    await user.type(searchInput, '¥22.10M');
+    await user.type(searchInput, '¥22.1M');
 
     expect(
       screen.getByRole('heading', {

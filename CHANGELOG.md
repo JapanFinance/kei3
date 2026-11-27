@@ -8,15 +8,15 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 Fixed the Furusato Nozei special deduction rate ([特例控除割合](https://www.city.chiyoda.lg.jp/koho/kurashi/zekin/juminze/furusatonozei-seido-shinkoku.html)) calculation to also subtract the national basic deduction increase above ¥480,000 (`max(0, national basic deduction − ¥480,000)`) alongside the personal deduction difference when determining the applicable tax bracket. Previously, 2026 taxpayers whose taxable income sat just below a national income tax bracket boundary (¥1,950,000, ¥3,300,000, ¥6,950,000, ¥9,000,000, or ¥18,000,000) were evaluated in the next higher bracket with too low a special deduction rate, overstating their Furusato Nozei limit.
 
-Impact on a single Tokyo salaried earner (age 20–39) in 2026:
+Impact on the Furusato Nozei limit for a single Tokyo salaried earner (age 20–39) in 2026:
 
 | Salary range | Overstatement | Example |
 | --- | ---: | --- |
-| ¥4.40M–¥5.25M | ¥3,000–¥4,000 | ¥61,000 → ¥58,000 at ¥5.00M |
-| ¥6.45M–¥6.70M | ¥12,000–¥13,000 | ¥98,000 → ¥86,000 at ¥6.50M |
-| ¥10.70M–¥10.80M | ¥9,000–¥10,000 | — |
-| ¥12.90M–¥13.00M | ¥49,000–¥50,000 | ¥327,000 → ¥277,000 at ¥13.00M |
-| ¥22.10M–¥22.20M | ¥93,000–¥94,000 | — |
+| ¥4.4M–¥5.25M | ¥3,000–¥4,000 | ¥61,000 → ¥58,000 at ¥5M |
+| ¥6.45M–¥6.7M | ¥12,000–¥13,000 | ¥98,000 → ¥86,000 at ¥6.5M |
+| ¥10.7M–¥10.8M | ¥9,000–¥10,000 | ¥215,000 → ¥205,000 at ¥10.8M |
+| ¥12.9M–¥13M | ¥49,000–¥50,000 | ¥327,000 → ¥277,000 at ¥13M |
+| ¥22.1M–¥22.2M | ¥93,000–¥94,000 | ¥739,000 → ¥645,000 at ¥22.2M |
 
 Anyone who calculated their Furusato Nozei limit using this calculator for 2026 before this fix should check again to see if they were affected.
 
