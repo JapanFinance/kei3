@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import changelogContent from '../../CHANGELOG.md?raw';
-import ChangelogModal from '../components/ChangelogModal';
+import ChangelogModal, { EntryBody } from '../components/ChangelogModal';
 import { parseChangelog } from '../utils/changelogUtils';
 
 const { entries } = parseChangelog(changelogContent);
@@ -165,5 +165,49 @@ describe('ChangelogModal', () => {
     expect(screen.queryByText(/Last viewed/i)).not.toBeInTheDocument();
     expect(screen.getByText(/updates · Last updated/i)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2);
+  });
+
+  it('renders markdown tables from CHANGELOG.md and matches table cells in search', async () => {
+    const user = userEvent.setup();
+
+    render(<ChangelogModal open onClose={vi.fn()} onViewed={vi.fn()} />);
+
+    const table = screen.getByRole('table');
+    expect(
+      within(table).getByRole('columnheader', { name: 'Affected salary range' }),
+    ).toBeVisible();
+    expect(within(table).getByRole('cell', { name: '¥4.40M–¥5.25M' })).toBeVisible();
+    expect(
+      within(table).getByRole('cell', { name: '¥327,000 → ¥277,000 at ¥13.00M' }),
+    ).toBeVisible();
+
+    const searchInput = screen.getByLabelText('Search updates');
+    await user.type(searchInput, '¥22.10M');
+
+    expect(
+      screen.getByRole('heading', {
+        name: /Fix Furusato Nozei limit for 2026 basic deduction increase/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders nested bullet lists with nested list elements', () => {
+    const parsed = parseChangelog(`
+## 2026-11-27: Nested list test
+
+### New
+
+- Parent item
+  - Child item
+    - Grandchild item
+`);
+
+    const { container } = render(<EntryBody entry={parsed.entries[0]!} hideSingleCategoryBadge />);
+
+    const lists = container.querySelectorAll('ul');
+    expect(lists).toHaveLength(3);
+    expect(screen.getByText('Parent item')).toBeInTheDocument();
+    expect(screen.getByText('Child item')).toBeInTheDocument();
+    expect(screen.getByText('Grandchild item')).toBeInTheDocument();
   });
 });

@@ -19,6 +19,12 @@ import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import Link from '@mui/material/Link';
 import { alpha, useTheme, type Theme } from '@mui/material/styles';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -38,6 +44,8 @@ import {
   splitChangelogEntries,
   type ChangelogCategory,
   type ChangelogEntry,
+  type ChangelogListItem,
+  type ChangelogTableBlock,
   type ParsedChangelog,
 } from '../utils/changelogUtils';
 
@@ -151,7 +159,104 @@ function renderInlineTokens(text: string): ReactNode[] {
   });
 }
 
-function EntryBody({
+function ChangelogList({ items, depth = 0 }: { items: ChangelogListItem[]; depth?: number }) {
+  const listStyleType = depth === 0 ? 'disc' : depth === 1 ? 'circle' : 'square';
+
+  return (
+    <Box
+      component="ul"
+      sx={{
+        m: 0,
+        mt: depth > 0 ? 0.5 : 0,
+        pl: 2.25,
+        listStyleType,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: depth > 0 ? 0.5 : 0.75,
+        color: 'text.primary',
+        maxWidth: '68ch',
+      }}
+    >
+      {items.map((item, idx) => (
+        <Box
+          key={idx}
+          component="li"
+          sx={{
+            color: 'text.primary',
+            typography: 'body2',
+            lineHeight: 1.65,
+          }}
+        >
+          {renderInlineTokens(item.text)}
+          {item.children && item.children.length > 0 && (
+            <ChangelogList items={item.children} depth={depth + 1} />
+          )}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function ChangelogTable({ block }: { block: ChangelogTableBlock }) {
+  return (
+    <TableContainer
+      sx={{
+        overflowX: 'auto',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        bgcolor: 'background.paper',
+      }}
+    >
+      <Table
+        size="small"
+        sx={{
+          '& th, & td': {
+            py: 0.75,
+            px: 1.25,
+            fontSize: '0.8125rem',
+            lineHeight: 1.5,
+            borderColor: 'divider',
+          },
+          '& th': {
+            fontWeight: 600,
+            bgcolor: 'action.hover',
+            whiteSpace: 'nowrap',
+          },
+          '& td': {
+            fontVariantNumeric: 'tabular-nums',
+          },
+          '& tbody tr:last-child td': {
+            borderBottom: 0,
+          },
+        }}
+      >
+        <TableHead>
+          <TableRow>
+            {block.headers.map((header, colIdx) => (
+              <TableCell key={colIdx} align={block.alignments[colIdx] ?? 'left'}>
+                {renderInlineTokens(header)}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {block.rows.map((row, rowIdx) => (
+            <TableRow key={rowIdx}>
+              {row.map((cell, colIdx) => (
+                <TableCell key={colIdx} align={block.alignments[colIdx] ?? 'left'}>
+                  {renderInlineTokens(cell)}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
+export function EntryBody({
   entry,
   filterCategory = 'all',
   hideSingleCategoryBadge = false,
@@ -172,13 +277,18 @@ function EntryBody({
   const showCategoryBlockChrome = categories.length > 1 || !hideSingleCategoryBadge;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: '68ch' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       {categories.map(category => {
-        const items = entry.sections[category];
-        if (!items || items.length === 0) return null;
+        const blocks = entry.sections[category];
+        if (!blocks || blocks.length === 0) return null;
 
         const { paletteKey } = CATEGORY_META[category];
-        const firstItem = items[0];
+        const firstBlock = blocks[0];
+        const isSingleFlatBullet =
+          blocks.length === 1 &&
+          firstBlock?.type === 'list' &&
+          firstBlock.items.length === 1 &&
+          !firstBlock.items[0]?.children?.length;
 
         return (
           <Box
@@ -199,32 +309,22 @@ function EntryBody({
               </Box>
             )}
 
-            {items.length === 1 && firstItem !== undefined ? (
-              <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.65 }}>
-                {renderInlineTokens(firstItem)}
+            {isSingleFlatBullet && firstBlock.items[0] ? (
+              <Typography
+                variant="body2"
+                sx={{ color: 'text.primary', lineHeight: 1.65, maxWidth: '68ch' }}
+              >
+                {renderInlineTokens(firstBlock.items[0].text)}
               </Typography>
             ) : (
-              <Box
-                component="ul"
-                sx={{
-                  m: 0,
-                  pl: 2.25,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.75,
-                  color: 'text.primary',
-                }}
-              >
-                {items.map((item, idx) => (
-                  <Typography
-                    key={idx}
-                    component="li"
-                    variant="body2"
-                    sx={{ color: 'text.primary', lineHeight: 1.65 }}
-                  >
-                    {renderInlineTokens(item)}
-                  </Typography>
-                ))}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                {blocks.map((block, idx) =>
+                  block.type === 'list' ? (
+                    <ChangelogList key={idx} items={block.items} />
+                  ) : (
+                    <ChangelogTable key={idx} block={block} />
+                  ),
+                )}
               </Box>
             )}
           </Box>

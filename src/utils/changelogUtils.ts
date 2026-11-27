@@ -16,10 +16,31 @@ export const CHANGELOG_CATEGORIES = [
 
 export type ChangelogCategory = (typeof CHANGELOG_CATEGORIES)[number];
 
+export interface ChangelogListItem {
+  text: string;
+  children?: ChangelogListItem[];
+}
+
+export interface ChangelogListBlock {
+  type: 'list';
+  items: ChangelogListItem[];
+}
+
+export type ChangelogTableAlignment = 'left' | 'center' | 'right';
+
+export interface ChangelogTableBlock {
+  type: 'table';
+  headers: string[];
+  alignments: ChangelogTableAlignment[];
+  rows: string[][];
+}
+
+export type ChangelogBlock = ChangelogListBlock | ChangelogTableBlock;
+
 export interface ChangelogEntry {
   date: string; // ISO format (yyyy-mm-dd) for parsing, display format handled in UI
   title?: string; // Optional concise headline from `## YYYY-MM-DD: Title`
-  sections: Partial<Record<ChangelogCategory, string[]>>;
+  sections: Partial<Record<ChangelogCategory, ChangelogBlock[]>>;
 }
 
 export interface ParsedChangelog {
@@ -36,19 +57,81 @@ export type InlineMarkdownToken =
 const SAFE_LINK_HREF = /^(?:https?:\/\/|\/)/i;
 const PDF_HREF = /\.pdf($|[?#])/i;
 
+const DATE_HEADER_REGEX = /^## (\d{4}-\d{2}-\d{2})(?::\s+(.+))?$/;
+const SECTION_HEADER_REGEX = /^### (New|Updated|Fixed|Deprecated|Removed|Security)$/i;
+const LIST_ITEM_REGEX = /^([ \t]*)- (.+)$/;
+const TABLE_SEPARATOR_CELL_REGEX = /^:?-+:?$/;
+
+function splitTableRow(trimmedLine: string): string[] {
+  const withoutLeadingPipe = trimmedLine.startsWith('|') ? trimmedLine.slice(1) : trimmedLine;
+  const cells: string[] = [];
+  let current = '';
+  let endedWithUnescapedPipe = false;
+
+  for (let i = 0; i < withoutLeadingPipe.length; i++) {
+    const ch = withoutLeadingPipe[i]!;
+    if (ch === '\\' && i + 1 < withoutLeadingPipe.length) {
+      const next = withoutLeadingPipe[i + 1]!;
+      if (next === '|' || next === '\\') {
+        current += next;
+        endedWithUnescapedPipe = false;
+        i += 1;
+        continue;
+      }
+    }
+
+    if (ch === '|') {
+      cells.push(current.trim());
+      current = '';
+      endedWithUnescapedPipe = true;
+      continue;
+    }
+
+    current += ch;
+    endedWithUnescapedPipe = false;
+  }
+
+  if (!endedWithUnescapedPipe) {
+    cells.push(current.trim());
+  }
+
+  return cells;
+}
+
+function parseTableAlignment(separatorCell: string): ChangelogTableAlignment {
+  if (/^:-+:$/.test(separatorCell)) return 'center';
+  if (/^-+:$/.test(separatorCell)) return 'right';
+  return 'left';
+}
+
+function normalizeTableRow(cells: string[], columnCount: number): string[] {
+  if (cells.length === columnCount) return cells;
+  if (cells.length > columnCount) return cells.slice(0, columnCount);
+  return [...cells, ...Array<string>(columnCount - cells.length).fill('')];
+}
+
 /**
  * Simple markdown changelog parser.
- * Parses a changelog with ISO date headers (`## yyyy-mm-dd` or `## yyyy-mm-dd: Title`).
+ * Parses a changelog with ISO date headers (`## yyyy-mm-dd` or `## yyyy-mm-dd: Title`),
+ * nested `- ` bullet lists, and GFM pipe tables.
  */
 export function parseChangelog(markdownContent: string): ParsedChangelog {
-  const lines = markdownContent.split('\n').map(line => line.trim());
+  const lines = markdownContent.split(/\r?\n/);
   const entries: ChangelogEntry[] = [];
   let currentEntry: ChangelogEntry | null = null;
   let currentSection: ChangelogCategory | null = null;
+  let listStack: Array<{ indent: number; item: ChangelogListItem }> = [];
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i]!;
+    const trimmed = rawLine.trim();
+
+    if (!trimmed) {
+      continue;
+    }
+
     // Check for date header (`## 2025-01-15` or `## 2025-01-15: Release title`)
-    const dateMatch = line.match(/^## (\d{4}-\d{2}-\d{2})(?::\s+(.+))?$/);
+    const dateMatch = trimmed.match(DATE_HEADER_REGEX);
     if (dateMatch) {
       if (currentEntry) {
         entries.push(currentEntry);
@@ -64,24 +147,98 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
           sections: {},
         };
         currentSection = null;
+        listStack = [];
       }
       continue;
     }
 
     // Check for section headers (### New, ### Updated, etc.)
-    const sectionMatch = line.match(/^### (New|Updated|Fixed|Deprecated|Removed|Security)$/i);
+    const sectionMatch = trimmed.match(SECTION_HEADER_REGEX);
     if (sectionMatch && currentEntry && sectionMatch[1]) {
       currentSection = sectionMatch[1].toLowerCase() as ChangelogCategory;
       currentEntry.sections[currentSection] ??= [];
+      listStack = [];
       continue;
     }
 
-    // Check for list items
-    const listMatch = line.match(/^- (.+)/);
-    if (listMatch && currentEntry && currentSection && listMatch[1]) {
-      const items = currentEntry.sections[currentSection] ?? [];
-      items.push(listMatch[1]);
-      currentEntry.sections[currentSection] = items;
+    if (!currentEntry || !currentSection) {
+      continue;
+    }
+
+    const blocks = currentEntry.sections[currentSection]!;
+
+    // Check for list items (preserving indentation for nested bullets)
+    const listMatch = rawLine.match(LIST_ITEM_REGEX);
+    if (listMatch && listMatch[2]) {
+      const indent = listMatch[1]!.replace(/\t/g, '  ').length;
+      const text = listMatch[2].trim();
+
+      let listBlock: ChangelogListBlock;
+      const lastBlock = blocks[blocks.length - 1];
+      if (lastBlock?.type === 'list') {
+        listBlock = lastBlock;
+      } else {
+        listBlock = { type: 'list', items: [] };
+        blocks.push(listBlock);
+        listStack = [];
+      }
+
+      while (listStack.length > 0 && listStack[listStack.length - 1]!.indent >= indent) {
+        listStack.pop();
+      }
+
+      const newItem: ChangelogListItem = { text };
+      const parent = listStack[listStack.length - 1]?.item;
+      if (parent) {
+        parent.children ??= [];
+        parent.children.push(newItem);
+      } else {
+        listBlock.items.push(newItem);
+      }
+
+      listStack.push({ indent, item: newItem });
+      continue;
+    }
+
+    // Check for GFM pipe table (header row + separator row)
+    if (trimmed.includes('|') && i + 1 < lines.length) {
+      const headers = splitTableRow(trimmed);
+      const separatorCells = splitTableRow(lines[i + 1]!.trim());
+
+      if (
+        headers.length > 0 &&
+        separatorCells.length === headers.length &&
+        separatorCells.every(cell => TABLE_SEPARATOR_CELL_REGEX.test(cell))
+      ) {
+        const alignments = separatorCells.map(parseTableAlignment);
+        const rows: string[][] = [];
+        i += 1;
+
+        while (i + 1 < lines.length) {
+          const nextRaw = lines[i + 1]!;
+          const nextTrimmed = nextRaw.trim();
+          if (
+            !nextTrimmed ||
+            !nextTrimmed.includes('|') ||
+            DATE_HEADER_REGEX.test(nextTrimmed) ||
+            SECTION_HEADER_REGEX.test(nextTrimmed) ||
+            LIST_ITEM_REGEX.test(nextRaw)
+          ) {
+            break;
+          }
+
+          rows.push(normalizeTableRow(splitTableRow(nextTrimmed), headers.length));
+          i += 1;
+        }
+
+        blocks.push({
+          type: 'table',
+          headers,
+          alignments,
+          rows,
+        });
+        listStack = [];
+      }
     }
   }
 
@@ -201,22 +358,28 @@ export function getChangelogEntryTitle(entry: ChangelogEntry): string {
   }
 
   for (const category of CHANGELOG_CATEGORIES) {
-    const firstItem = entry.sections[category]?.[0];
-    if (!firstItem) continue;
+    const blocks = entry.sections[category];
+    if (!blocks) continue;
 
-    const plain = stripInlineMarkdown(firstItem).trim();
-    if (!plain) continue;
+    for (const block of blocks) {
+      if (block.type !== 'list') continue;
+      const firstItem = block.items[0]?.text;
+      if (!firstItem) continue;
 
-    const sentenceMatch = plain.match(/^(.+?[.!?])(?:\s|$)/);
-    const candidate = sentenceMatch?.[1] ? sentenceMatch[1].replace(/\.$/, '') : plain;
-    if (candidate.length <= MAX_FALLBACK_TITLE_LENGTH) {
-      return candidate;
+      const plain = stripInlineMarkdown(firstItem).trim();
+      if (!plain) continue;
+
+      const sentenceMatch = plain.match(/^(.+?[.!?])(?:\s|$)/);
+      const candidate = sentenceMatch?.[1] ? sentenceMatch[1].replace(/\.$/, '') : plain;
+      if (candidate.length <= MAX_FALLBACK_TITLE_LENGTH) {
+        return candidate;
+      }
+
+      const sliced = candidate.slice(0, MAX_FALLBACK_TITLE_LENGTH - 1);
+      const lastSpace = sliced.lastIndexOf(' ');
+      const truncated = lastSpace > 40 ? sliced.slice(0, lastSpace) : sliced;
+      return `${truncated.trimEnd()}…`;
     }
-
-    const sliced = candidate.slice(0, MAX_FALLBACK_TITLE_LENGTH - 1);
-    const lastSpace = sliced.lastIndexOf(' ');
-    const truncated = lastSpace > 40 ? sliced.slice(0, lastSpace) : sliced;
-    return `${truncated.trimEnd()}…`;
   }
 
   return formatChangelogDate(entry.date);
@@ -250,6 +413,25 @@ export function splitChangelogEntries(
   };
 }
 
+function extractListItemSearchTexts(items: readonly ChangelogListItem[]): string[] {
+  const texts: string[] = [];
+  for (const item of items) {
+    texts.push(stripInlineMarkdown(item.text));
+    if (item.children?.length) {
+      texts.push(...extractListItemSearchTexts(item.children));
+    }
+  }
+  return texts;
+}
+
+function extractBlockSearchTexts(blocks: readonly ChangelogBlock[]): string[] {
+  return blocks.flatMap(block =>
+    block.type === 'list'
+      ? extractListItemSearchTexts(block.items)
+      : [...block.headers, ...block.rows.flat()].map(stripInlineMarkdown),
+  );
+}
+
 /**
  * Determine whether an entry matches a category filter and free-text query.
  */
@@ -273,7 +455,7 @@ export function matchesChangelogFilter(
     formatChangelogDate(entry.date),
     formatChangelogDateShort(entry.date),
     getChangelogEntryTitle(entry),
-    ...applicableCategories.flatMap(cat => (entry.sections[cat] ?? []).map(stripInlineMarkdown)),
+    ...applicableCategories.flatMap(cat => extractBlockSearchTexts(entry.sections[cat] ?? [])),
   ];
 
   return searchableParts.some(part => part.toLowerCase().includes(normalizedQuery));
