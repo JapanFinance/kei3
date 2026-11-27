@@ -671,6 +671,7 @@ interface FurusatoCapParameters {
 function getFurusatoCapParameters(
   residenceTaxDetailsForCap: ResidenceTaxDetails,
   year: number,
+  nationalBasicDeduction: number,
 ): FurusatoCapParameters | undefined {
   const residenceSeparate = residenceTaxDetailsForCap.separate;
   const residenceSeparateTaxableIncome = residenceSeparate
@@ -698,6 +699,7 @@ function getFurusatoCapParameters(
     residenceTaxDetailsForCap.taxableIncome,
     residenceTaxDetailsForCap.personalDeductionDifference,
     separateNationalRate,
+    nationalBasicDeduction,
   );
 
   // Statutory ceiling: donations eligible for the residence tax deduction cannot exceed 30% of
@@ -762,12 +764,13 @@ export function calculateFurusatoResidenceCredit(
   donationAmount: number,
   residenceTaxDetailsForCap: ResidenceTaxDetails,
   year: number,
+  nationalBasicDeduction: number,
 ): FurusatoResidenceCreditDetails {
   if (donationAmount <= FURUSATO_OUT_OF_POCKET_COST) {
     return ZERO_FURUSATO_RESIDENCE_CREDIT;
   }
 
-  const params = getFurusatoCapParameters(residenceTaxDetailsForCap, year);
+  const params = getFurusatoCapParameters(residenceTaxDetailsForCap, year, nationalBasicDeduction);
   if (!params) {
     return ZERO_FURUSATO_RESIDENCE_CREDIT;
   }
@@ -786,6 +789,7 @@ export function calculateFurusatoResidenceCredit(
 export function calculateFurusatoLimit(
   taxableIncomeForNationalIncomeTax: number,
   residenceTaxDetailsForCap: ResidenceTaxDetails,
+  nationalBasicDeduction: number,
   reported?: { nationalTaxable: SeparateNetIncome; year: number },
 ): FurusatoLimitDetails {
   const nationalClasses: IncomeClassAmounts = {
@@ -807,6 +811,7 @@ export function calculateFurusatoLimit(
   const params = getFurusatoCapParameters(
     residenceTaxDetailsForCap,
     reported?.year ?? DEFAULT_INCOME_YEAR,
+    nationalBasicDeduction,
   );
   if (!params) {
     return noLimit;
@@ -837,14 +842,49 @@ export function calculateFurusatoLimit(
 const ONE_HUNDRED_PERCENT = percent(100);
 
 /**
+ * Pre-2025 income tax basic deduction baseline (¥480,000) used in the Furusato Nozei
+ * 人的控除差調整額 formula.
+ *
+ * Under the amended Local Tax Act Arts. 37-2(11)(i) & 314-7(11)(i) and Suppl. Art. 7-2(2)/(5),
+ * Furusato Nozei's 人的控除差調整額 adds `max(0, nationalBasicDeduction − 480,000)` on top of the
+ * Art. 314-6 personal deduction difference (which itself remains unchanged for 調整控除).
+ *
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226
+ * @see https://www.city.kawasaki.jp/230/cmsfiles/contents/0000020/20376/keisanhouhou.pdf
+ * @see https://www.city.hiroshima.lg.jp/living/zei/1006016/1025578/1019117.html
+ */
+export const FURUSATO_NATIONAL_BASIC_DEDUCTION_BASELINE = 480_000;
+
+/**
+ * Calculates the Furusato Nozei bracket-lookup income (`課税総所得金額 − 人的控除差調整額`) per
+ * Local Tax Act Arts. 37-2(11)(i) and 314-7(11)(i), adding `max(0, nationalBasicDeduction −
+ * 480,000)` to the Art. 314-6 personal deduction difference.
+ */
+export function calculateFurusatoAdjustedTaxableIncome(
+  taxableIncome: number,
+  personalDeductionDifference: number,
+  nationalBasicDeduction: number = FURUSATO_NATIONAL_BASIC_DEDUCTION_BASELINE,
+): number {
+  const basicDeductionAdjustment = Math.max(
+    0,
+    nationalBasicDeduction - FURUSATO_NATIONAL_BASIC_DEDUCTION_BASELINE,
+  );
+  return taxableIncome - (personalDeductionDifference + basicDeductionAdjustment);
+}
+
+/**
  * Returns the 特例控除割合 for the taxpayer.
  *
  * The bands and ratios are the statute's own table (第37条の2第11項第一号: 195万円以下 →
  * 100分の85, …, 4,000万円超 → 100分の45) over 課税総所得金額 less the 人的控除差調整額, where each
- * ratio equals 90% minus the band's rate below. 附則第5条の6 replaces each ratio for
- * 平成26年度〜令和20年度 (2014–2038) with the value that folds in the 復興特別所得税 factor
- * (100分の85 → 100分の84.895, which equals 90% − 5% × 1.021), so this function computes the
- * replaced ratio as 1 − donationBasicDeductionRate − (band rate × 1.021).
+ * ratio equals 90% minus the band's rate below. Under the amended Local Tax Act Arts. 37-2(11)(i)
+ * and 314-7(11)(i), 人的控除差調整額 equals the Art. 314-6 personal deduction difference plus
+ * `max(0, nationalBasicDeduction − 480,000)` (where `nationalBasicDeduction` is the prior-year
+ * income-tax basic deduction under Income Tax Act Art. 86(2) and Special Tax Measures Act
+ * Art. 41-16-2). 附則第5条の6 replaces each ratio for 平成26年度〜令和20年度 (2014–2038) with the
+ * value that folds in the 復興特別所得税 factor (100分の85 → 100分の84.895, which equals
+ * 90% − 5% × 1.021), so this function computes the replaced ratio as
+ * 1 − donationBasicDeductionRate − (band rate × 1.021).
  *
  * When there is no 課税総所得金額, or the 人的控除差調整額 exceeds it, and investment income is
  * reported under 申告分離課税, 附則第5条の5第1項第5号 sets the ratio to 100分の75 instead —
@@ -860,9 +900,10 @@ const ONE_HUNDRED_PERCENT = percent(100);
  * reformed, this table changes only when 地方税法 itself is amended.
  *
  * @param taxableIncome 住民税の課税総所得金額
- * @param personalDeductionDifference 人的控除差調整額
+ * @param personalDeductionDifference Art. 314-6 personal deduction difference (人的控除額の差の合計額)
  * @param separateNationalRate the 所得税 rate on the reported investment income, when there is
  *   any with a taxable amount left after the 所得控除; undefined otherwise
+ * @param nationalBasicDeduction Prior-year national income tax basic deduction (defaults to ¥480,000)
  * @returns 特例控除割合
  * @see 地方税法第37条の2第11項第一号（道府県民税）・第314条の7第11項第一号（市町村民税）
  * @see 地方税法附則第5条の5第1項第五号（分離課税所得がある場合の特例控除額の特例）
@@ -872,8 +913,13 @@ export function getSpecialDeductionMultiplier(
   taxableIncome: number,
   personalDeductionDifference: number,
   separateNationalRate: Rate | undefined,
+  nationalBasicDeduction: number = FURUSATO_NATIONAL_BASIC_DEDUCTION_BASELINE,
 ): Rate {
-  const adjustedTaxableIncome = taxableIncome - personalDeductionDifference;
+  const adjustedTaxableIncome = calculateFurusatoAdjustedTaxableIncome(
+    taxableIncome,
+    personalDeductionDifference,
+    nationalBasicDeduction,
+  );
   let incomeTaxRate: Rate;
   if (separateNationalRate !== undefined && (taxableIncome <= 0 || adjustedTaxableIncome < 0)) {
     incomeTaxRate = separateNationalRate;

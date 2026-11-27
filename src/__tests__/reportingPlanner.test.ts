@@ -305,7 +305,7 @@ describe('uniform plans reproduce the migrated comparison figures', () => {
       incomeTax: 91_700 + 153_150,
       residenceTax: 243_100 + 50_000,
       socialInsurance: 722_252,
-      furusatoNozeiLimit: 61_000,
+      furusatoNozeiLimit: 58_000,
       totalIncome: 3_560_000,
     });
   });
@@ -317,7 +317,7 @@ describe('uniform plans reproduce the migrated comparison figures', () => {
       incomeTax: 244_800,
       residenceTax: 293_100,
       socialInsurance: 722_252,
-      furusatoNozeiLimit: 74_000,
+      furusatoNozeiLimit: 69_000,
       totalIncome: 4_560_000,
     });
   });
@@ -329,7 +329,7 @@ describe('uniform plans reproduce the migrated comparison figures', () => {
       incomeTax: 186_000,
       residenceTax: 343_100,
       socialInsurance: 722_252,
-      furusatoNozeiLimit: 99_000,
+      furusatoNozeiLimit: 86_000,
       totalIncome: 4_560_000,
     });
   });
@@ -348,7 +348,7 @@ describe('uniform plans weigh the foreign tax credit', () => {
   // 4,660,113. Reported under 申告分離課税 the credit brings the income tax to 191,100 (+ 100,000
   // foreign tax) and the residence tax to 277,300, kept 4,709,348; under 総合課税 145,200
   // (+ 100,000) and 331,100, kept 4,701,448. The furusato limits are those without the foreign
-  // tax (61,000 / 74,000 / 99,000): its 20% cap is on the residence tax before the credit.
+  // tax (58,000 / 69,000 / 86,000): its 20% cap is on the residence tax before the credit.
   const inputs = salaryInputs([
     dividend({
       id: 'd',
@@ -366,7 +366,7 @@ describe('uniform plans weigh the foreign tax credit', () => {
       incomeTax: 329_535,
       residenceTax: 288_100,
       socialInsurance: 722_252,
-      furusatoNozeiLimit: 61_000,
+      furusatoNozeiLimit: 58_000,
       totalIncome: 3_560_000,
     });
   });
@@ -377,7 +377,7 @@ describe('uniform plans weigh the foreign tax credit', () => {
       incomeTax: 291_100,
       residenceTax: 277_300,
       socialInsurance: 722_252,
-      furusatoNozeiLimit: 74_000,
+      furusatoNozeiLimit: 69_000,
       totalIncome: 4_560_000,
     });
   });
@@ -388,7 +388,7 @@ describe('uniform plans weigh the foreign tax credit', () => {
       incomeTax: 245_200,
       residenceTax: 331_100,
       socialInsurance: 722_252,
-      furusatoNozeiLimit: 99_000,
+      furusatoNozeiLimit: 86_000,
       totalIncome: 4_560_000,
     });
   });
