@@ -145,7 +145,33 @@ describe('parseChangelog', () => {
     ]);
   });
 
-  it('ignores non-table pipe lines and mismatched separator rows', () => {
+  it('parses plain paragraphs separated by blank lines and joins wrapped lines', () => {
+    const md = `
+## 2026-11-27: Paragraph release
+
+### Fixed
+
+First line of paragraph one
+continued on the next line.
+
+Second standalone paragraph.
+`;
+
+    const parsed = parseChangelog(md);
+
+    expect(parsed.entries[0]?.sections.fixed).toEqual([
+      {
+        type: 'paragraph',
+        text: 'First line of paragraph one continued on the next line.',
+      },
+      {
+        type: 'paragraph',
+        text: 'Second standalone paragraph.',
+      },
+    ]);
+  });
+
+  it('does not parse malformed pipe lines as a table block', () => {
     const md = `
 ## 2026-11-27: Pipe edge cases
 
@@ -158,11 +184,17 @@ describe('parseChangelog', () => {
 `;
 
     const parsed = parseChangelog(md);
+    const blocks = parsed.entries[0]?.sections.updated ?? [];
 
-    expect(parsed.entries[0]?.sections.updated).toEqual([
+    expect(blocks.some(block => block.type === 'table')).toBe(false);
+    expect(blocks).toEqual([
       {
         type: 'list',
         items: [{ text: 'Valid bullet.' }],
+      },
+      {
+        type: 'paragraph',
+        text: '| Not | A | Table | | --- | --- | | Still | Not | Table |',
       },
     ]);
   });
@@ -251,6 +283,22 @@ describe('getChangelogEntryTitle', () => {
 
     expect(getChangelogEntryTitle(entry)).toBe('Updated ratio from 25.2% to 26.5% per MIC');
   });
+
+  it('derives a fallback title from a leading paragraph block', () => {
+    const entry: ChangelogEntry = {
+      date: '2026-11-27',
+      sections: {
+        fixed: [
+          {
+            type: 'paragraph',
+            text: 'Fixed **Furusato Nozei** limit calculation. Second sentence.',
+          },
+        ],
+      },
+    };
+
+    expect(getChangelogEntryTitle(entry)).toBe('Fixed Furusato Nozei limit calculation');
+  });
 });
 
 describe('splitChangelogEntries', () => {
@@ -306,10 +354,11 @@ describe('getChangelogEntryCategories and matchesChangelogFilter', () => {
         },
       ],
       fixed: [
+        { type: 'paragraph', text: 'Standalone paragraph about adjustment credit.' },
         { type: 'list', items: [{ text: 'Applied low-income reduction.' }] },
         {
           type: 'table',
-          headers: ['Salary Range', 'Impact'],
+          headers: ['Salary range', 'Impact'],
           alignments: ['left', 'right'],
           rows: [['¥4.40M–¥5.25M', '[Details](https://example.com/details)']],
         },
@@ -321,12 +370,13 @@ describe('getChangelogEntryCategories and matchesChangelogFilter', () => {
     expect(getChangelogEntryCategories(entry)).toEqual(['new', 'fixed']);
   });
 
-  it('filters by category, title, plain text, nested bullets, table cells, and formatted date', () => {
+  it('filters by category, title, paragraphs, nested bullets, table cells, and formatted date', () => {
     expect(matchesChangelogFilter(entry, 'all', '')).toBe(true);
     expect(matchesChangelogFilter(entry, 'updated', '')).toBe(false);
     expect(matchesChangelogFilter(entry, 'new', '全額免除')).toBe(true);
     expect(matchesChangelogFilter(entry, 'new', 'nested child detail')).toBe(true);
     expect(matchesChangelogFilter(entry, 'fixed', '全額免除')).toBe(false);
+    expect(matchesChangelogFilter(entry, 'fixed', 'adjustment credit')).toBe(true);
     expect(matchesChangelogFilter(entry, 'fixed', 'salary range')).toBe(true);
     expect(matchesChangelogFilter(entry, 'fixed', '¥4.40m')).toBe(true);
     expect(matchesChangelogFilter(entry, 'fixed', 'details')).toBe(true);

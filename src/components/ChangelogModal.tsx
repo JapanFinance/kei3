@@ -318,13 +318,24 @@ export function EntryBody({
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-                {blocks.map((block, idx) =>
-                  block.type === 'list' ? (
-                    <ChangelogList key={idx} items={block.items} />
-                  ) : (
-                    <ChangelogTable key={idx} block={block} />
-                  ),
-                )}
+                {blocks.map((block, idx) => {
+                  switch (block.type) {
+                    case 'paragraph':
+                      return (
+                        <Typography
+                          key={idx}
+                          variant="body2"
+                          sx={{ color: 'text.primary', lineHeight: 1.65, maxWidth: '68ch' }}
+                        >
+                          {renderInlineTokens(block.text)}
+                        </Typography>
+                      );
+                    case 'list':
+                      return <ChangelogList key={idx} items={block.items} />;
+                    case 'table':
+                      return <ChangelogTable key={idx} block={block} />;
+                  }
+                })}
               </Box>
             )}
           </Box>

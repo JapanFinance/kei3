@@ -167,15 +167,20 @@ describe('ChangelogModal', () => {
     expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2);
   });
 
-  it('renders markdown tables from CHANGELOG.md and matches table cells in search', async () => {
+  it('renders plain paragraphs and markdown tables from CHANGELOG.md and matches table cells in search', async () => {
     const user = userEvent.setup();
 
     render(<ChangelogModal open onClose={vi.fn()} onViewed={vi.fn()} />);
 
-    const table = screen.getByRole('table');
+    const entryEl = document.getElementById('changelog-entry-2026-11-27');
+    expect(entryEl).not.toBeNull();
+    expect(entryEl!.querySelectorAll('ul')).toHaveLength(0);
     expect(
-      within(table).getByRole('columnheader', { name: 'Affected salary range' }),
-    ).toBeVisible();
+      within(entryEl!).getByText(/Impact on a single Tokyo salaried earner/i),
+    ).toBeInTheDocument();
+
+    const table = within(entryEl!).getByRole('table');
+    expect(within(table).getByRole('columnheader', { name: 'Salary range' })).toBeVisible();
     expect(within(table).getByRole('cell', { name: '¥4.40M–¥5.25M' })).toBeVisible();
     expect(
       within(table).getByRole('cell', { name: '¥327,000 → ¥277,000 at ¥13.00M' }),

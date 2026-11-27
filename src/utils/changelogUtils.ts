@@ -16,6 +16,11 @@ export const CHANGELOG_CATEGORIES = [
 
 export type ChangelogCategory = (typeof CHANGELOG_CATEGORIES)[number];
 
+export interface ChangelogParagraphBlock {
+  type: 'paragraph';
+  text: string;
+}
+
 export interface ChangelogListItem {
   text: string;
   children?: ChangelogListItem[];
@@ -35,7 +40,7 @@ export interface ChangelogTableBlock {
   rows: string[][];
 }
 
-export type ChangelogBlock = ChangelogListBlock | ChangelogTableBlock;
+export type ChangelogBlock = ChangelogParagraphBlock | ChangelogListBlock | ChangelogTableBlock;
 
 export interface ChangelogEntry {
   date: string; // ISO format (yyyy-mm-dd) for parsing, display format handled in UI
@@ -113,7 +118,7 @@ function normalizeTableRow(cells: string[], columnCount: number): string[] {
 /**
  * Simple markdown changelog parser.
  * Parses a changelog with ISO date headers (`## yyyy-mm-dd` or `## yyyy-mm-dd: Title`),
- * nested `- ` bullet lists, and GFM pipe tables.
+ * plain paragraphs, nested `- ` bullet lists, and GFM pipe tables.
  */
 export function parseChangelog(markdownContent: string): ParsedChangelog {
   const lines = markdownContent.split(/\r?\n/);
@@ -121,12 +126,14 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
   let currentEntry: ChangelogEntry | null = null;
   let currentSection: ChangelogCategory | null = null;
   let listStack: Array<{ indent: number; item: ChangelogListItem }> = [];
+  let currentParagraph: ChangelogParagraphBlock | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i]!;
     const trimmed = rawLine.trim();
 
     if (!trimmed) {
+      currentParagraph = null;
       continue;
     }
 
@@ -148,6 +155,7 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
         };
         currentSection = null;
         listStack = [];
+        currentParagraph = null;
       }
       continue;
     }
@@ -158,6 +166,7 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
       currentSection = sectionMatch[1].toLowerCase() as ChangelogCategory;
       currentEntry.sections[currentSection] ??= [];
       listStack = [];
+      currentParagraph = null;
       continue;
     }
 
@@ -170,6 +179,7 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
     // Check for list items (preserving indentation for nested bullets)
     const listMatch = rawLine.match(LIST_ITEM_REGEX);
     if (listMatch && listMatch[2]) {
+      currentParagraph = null;
       const indent = listMatch[1]!.replace(/\t/g, '  ').length;
       const text = listMatch[2].trim();
 
@@ -238,7 +248,18 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
           rows,
         });
         listStack = [];
+        currentParagraph = null;
+        continue;
       }
+    }
+
+    // Plain paragraph text (join consecutive wrapped lines with a space)
+    listStack = [];
+    if (currentParagraph) {
+      currentParagraph.text = `${currentParagraph.text} ${trimmed}`;
+    } else {
+      currentParagraph = { type: 'paragraph', text: trimmed };
+      blocks.push(currentParagraph);
     }
   }
 
@@ -362,11 +383,15 @@ export function getChangelogEntryTitle(entry: ChangelogEntry): string {
     if (!blocks) continue;
 
     for (const block of blocks) {
-      if (block.type !== 'list') continue;
-      const firstItem = block.items[0]?.text;
-      if (!firstItem) continue;
+      const firstText =
+        block.type === 'paragraph'
+          ? block.text
+          : block.type === 'list'
+            ? block.items[0]?.text
+            : undefined;
+      if (!firstText) continue;
 
-      const plain = stripInlineMarkdown(firstItem).trim();
+      const plain = stripInlineMarkdown(firstText).trim();
       if (!plain) continue;
 
       const sentenceMatch = plain.match(/^(.+?[.!?])(?:\s|$)/);
@@ -425,11 +450,16 @@ function extractListItemSearchTexts(items: readonly ChangelogListItem[]): string
 }
 
 function extractBlockSearchTexts(blocks: readonly ChangelogBlock[]): string[] {
-  return blocks.flatMap(block =>
-    block.type === 'list'
-      ? extractListItemSearchTexts(block.items)
-      : [...block.headers, ...block.rows.flat()].map(stripInlineMarkdown),
-  );
+  return blocks.flatMap(block => {
+    switch (block.type) {
+      case 'paragraph':
+        return [stripInlineMarkdown(block.text)];
+      case 'list':
+        return extractListItemSearchTexts(block.items);
+      case 'table':
+        return [...block.headers, ...block.rows.flat()].map(stripInlineMarkdown);
+    }
+  });
 }
 
 /**
