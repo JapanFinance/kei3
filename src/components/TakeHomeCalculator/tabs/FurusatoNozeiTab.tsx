@@ -64,6 +64,8 @@ const formatReduction = (amount: number): string => formatJPY(amount > 0 ? -amou
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // Assumes existingTemporaryIncome === 0 because inputs.temporaryIncome is engine-only for now;
+  // once exposed in the UI, pass it through from results and update FurusatoTemporaryIncomeTooltip.
   const tempIncome = estimateFurusatoTemporaryIncome(results.furusatoNozei.limit);
   const [showResidenceTaxDetails, setShowResidenceTaxDetails] = useState(false);
   const [showTemporaryIncomeDetails, setShowTemporaryIncomeDetails] = useState(false);

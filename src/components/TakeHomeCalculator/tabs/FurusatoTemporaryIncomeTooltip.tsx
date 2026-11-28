@@ -75,10 +75,10 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
     >
       <Box>
         <Typography variant="body2" sx={{ mb: 1 }}>
-          Return gifts (返礼品) received from municipalities are treated as gifts from a corporation
-          (法人からの贈与) and classified as <strong>Temporary Income (一時所得)</strong>. The
-          Furusato Nozei donation itself is not deductible as an expense against temporary income
-          because it is claimed separately as a donation deduction/credit.
+          Return gifts (返礼品) received from municipalities are classified as{' '}
+          <strong>Temporary Income (一時所得)</strong>. The Furusato Nozei donation itself is not
+          deductible as an expense against temporary income because it is claimed separately as a
+          donation deduction/credit.
         </Typography>
         <Typography variant="body2" sx={{ mb: 1 }}>
           <strong>Valuation & Shipping:</strong> Fair market value (時価) is based on each
@@ -154,7 +154,7 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
           </table>
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
             {hasNetTempIncome
-              ? 'Half (½) of positive net temporary income is added to aggregate taxable income (総所得金額). Calculated by the tax engine assuming donations at the limit, no other temporary income, and delivery within the same tax year.'
+              ? 'Half (½) of positive net temporary income is added to aggregate net income (総所得金額). Calculated assuming donations at the limit, no other temporary income, and delivery within the same tax year.'
               : `The ¥500,000 special deduction (特別控除) is shared across all temporary income in the calendar year. Half (½) of any excess is added to aggregate net income (総所得金額).`}
           </Typography>
         </Box>
