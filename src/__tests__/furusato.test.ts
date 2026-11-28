@@ -732,39 +732,39 @@ describe('calculateFurusatoNozeiLimit', () => {
     });
 
     it('selects the statutory 申告特例控除割合 across all 5 income tiers', () => {
-      expect(getDeclarationSpecialCreditRatio(2_000_000, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(2_000_000, 50_000, 480_000).toDecimal()).toBeCloseTo(
         5.105 / 84.895,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(2_000_001, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(2_000_001, 50_000, 480_000).toDecimal()).toBeCloseTo(
         10.21 / 79.79,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(3_350_000, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(3_350_000, 50_000, 480_000).toDecimal()).toBeCloseTo(
         10.21 / 79.79,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(3_350_001, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(3_350_001, 50_000, 480_000).toDecimal()).toBeCloseTo(
         20.42 / 69.58,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(7_000_000, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(7_000_000, 50_000, 480_000).toDecimal()).toBeCloseTo(
         20.42 / 69.58,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(7_000_001, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(7_000_001, 50_000, 480_000).toDecimal()).toBeCloseTo(
         23.483 / 66.517,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(9_050_000, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(9_050_000, 50_000, 480_000).toDecimal()).toBeCloseTo(
         23.483 / 66.517,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(9_050_001, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(9_050_001, 50_000, 480_000).toDecimal()).toBeCloseTo(
         33.693 / 56.307,
         10,
       );
-      expect(getDeclarationSpecialCreditRatio(50_000_000, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(50_000_000, 50_000, 480_000).toDecimal()).toBeCloseTo(
         33.693 / 56.307,
         10,
       );
@@ -797,7 +797,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       // At 課税総所得金額 2,407,000 with 人的控除差 50,000, subtracting only 50,000 yields
       // 2,357,000 (10% tier: 10.21 / 79.79). With the 2026 ¥1,040,000 basic deduction
       // (adding 560,000 to 人的控除差調整額), adjusted income is 1,797,000 (5% tier: 5.105 / 84.895).
-      expect(getDeclarationSpecialCreditRatio(2_407_000, 50_000).toDecimal()).toBeCloseTo(
+      expect(getDeclarationSpecialCreditRatio(2_407_000, 50_000, 480_000).toDecimal()).toBeCloseTo(
         10.21 / 79.79,
         10,
       );

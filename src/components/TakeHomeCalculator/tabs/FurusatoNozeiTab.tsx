@@ -24,7 +24,6 @@ import {
   estimateFurusatoTemporaryIncome,
   getFurusatoOneStopOutOfPocketCost,
   getFurusatoOutOfPocketCost,
-  getOneStopIneligibilityReasons,
   isHighOutOfPocketCost,
   OUT_OF_POCKET_ROUNDING_MARGIN,
 } from '../../../utils/furusatoNozei';
@@ -334,8 +333,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const tempIncomeResidenceTax = effect?.residenceTax ?? 0;
   const tempIncomeSocialInsurance = effect?.socialInsurance ?? 0;
   const tempIncomeTotalCost = effect?.total ?? 0;
-  const totalOutOfPocketCost = getFurusatoOutOfPocketCost(results.furusatoNozei);
-  const donationOutOfPocketCost = totalOutOfPocketCost - tempIncomeTotalCost;
+  const taxReturnOutOfPocketCost = getFurusatoOutOfPocketCost(results.furusatoNozei);
+  const donationOutOfPocketCost = taxReturnOutOfPocketCost - tempIncomeTotalCost;
   const hasTemporaryIncomeCost = tempIncomeTotalCost !== 0;
   const hasPositiveTemporaryIncomeCost = tempIncomeTotalCost > 0;
   const hasEffectBreakdown =
@@ -345,8 +344,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       ? 'additional tax and social insurance'
       : 'income and residence tax';
   const hasHighDonationCost = isHighOutOfPocketCost(donationOutOfPocketCost);
-  const hasHighTotalOutOfPocket = isHighOutOfPocketCost(totalOutOfPocketCost);
-  const netEstimatedBenefit = tempIncome.estimatedGiftsValue - totalOutOfPocketCost;
+  const hasHighTaxReturnCost = isHighOutOfPocketCost(taxReturnOutOfPocketCost);
+  const taxReturnNetBenefit = tempIncome.estimatedGiftsValue - taxReturnOutOfPocketCost;
 
   const oneStop = results.furusatoNozei.oneStop;
   const isOneStopEligible = oneStop?.eligible === true;
@@ -357,9 +356,9 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const oneStopNetBenefit = tempIncome.estimatedGiftsValue - oneStopOutOfPocketCost;
   const oneStopSavesCost =
     isOneStopEligible &&
-    oneStopOutOfPocketCost + OUT_OF_POCKET_ROUNDING_MARGIN < totalOutOfPocketCost;
+    oneStopOutOfPocketCost + OUT_OF_POCKET_ROUNDING_MARGIN < taxReturnOutOfPocketCost;
   const defaultMobileMethod: FilingMethod =
-    oneStopOutOfPocketCost <= totalOutOfPocketCost ? 'oneStop' : 'taxReturn';
+    oneStopOutOfPocketCost <= taxReturnOutOfPocketCost ? 'oneStop' : 'taxReturn';
   const mobileMethod: FilingMethod = isOneStopEligible
     ? (selectedMethod ?? defaultMobileMethod)
     : 'taxReturn';
@@ -382,7 +381,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       foreignTaxCredit.prefecture +
       foreignTaxCredit.city >
       0;
-  const oneStopIneligibilityReasons = getOneStopIneligibilityReasons(results);
+  const oneStopIneligibilityReasons = oneStop && !oneStop.eligible ? oneStop.ineligibleReasons : [];
   const oneStopReasonsText = oneStopIneligibilityReasons
     .map(reason => ONE_STOP_INELIGIBILITY_LABELS[reason])
     .join('; ');
@@ -407,8 +406,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       </Typography>
     ));
 
-  const formattedOutOfPocketTotal = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(totalOutOfPocketCost)}`;
-  const formattedOutOfPocketDeduction = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(-totalOutOfPocketCost)}`;
+  const formattedOutOfPocketTotal = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(taxReturnOutOfPocketCost)}`;
+  const formattedOutOfPocketDeduction = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(-taxReturnOutOfPocketCost)}`;
 
   const incomeTaxTooltip = (
     <DetailedTooltip title="Income Tax Reduction" icon={SIMPLE_TOOLTIP_ICON}>
@@ -574,7 +573,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                 {formatJPY(tempIncomeTotalCost)} in {tempIncomeCostLabel} (
                 {formatJPY(donationOutOfPocketCost)} base donation cost + ≈{' '}
                 {formatJPY(tempIncomeTotalCost)} gift temporary income effect = ≈{' '}
-                {formatJPY(totalOutOfPocketCost)} total).
+                {formatJPY(taxReturnOutOfPocketCost)} total).
               </Typography>
             )}
           </>
@@ -619,11 +618,11 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const oneStopTint = oneStopSavesCost ? alpha(theme.palette.primary.main, 0.04) : undefined;
   const oneStopColumnBg = isOneStopEligible ? oneStopTint : theme.palette.action.hover;
   const desktopNetBenefitWarning = isOneStopEligible
-    ? oneStopNetBenefit < 0 && netEstimatedBenefit < 0
-    : netEstimatedBenefit < 0;
+    ? oneStopNetBenefit < 0 && taxReturnNetBenefit < 0
+    : taxReturnNetBenefit < 0;
   const mobileNetBenefitWarning = isOneStopEligible
-    ? (mobileMethod === 'oneStop' ? oneStopNetBenefit : netEstimatedBenefit) < 0
-    : netEstimatedBenefit < 0;
+    ? (mobileMethod === 'oneStop' ? oneStopNetBenefit : taxReturnNetBenefit) < 0
+    : taxReturnNetBenefit < 0;
   const netBenefitBg = (warning: boolean) =>
     alpha(warning ? theme.palette.warning.main : theme.palette.success.main, 0.07);
   const netBenefitLabelColor = (warning: boolean) => (warning ? 'warning.dark' : 'success.dark');
@@ -782,12 +781,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                 color:
                   mobileMethod === 'taxReturn'
                     ? 'inherit'
-                    : hasHighTotalOutOfPocket
+                    : hasHighTaxReturnCost
                       ? 'warning.main'
                       : 'text.secondary',
               }}
             >
-              {hasHighTotalOutOfPocket && (
+              {hasHighTaxReturnCost && (
                 <WarningIcon
                   aria-hidden
                   sx={{
@@ -1016,11 +1015,11 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   component="span"
                   sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
                 >
-                  {hasHighTotalOutOfPocket && taxReturnOutOfPocketTooltip}
+                  {hasHighTaxReturnCost && taxReturnOutOfPocketTooltip}
                   {formattedOutOfPocketTotal}
                 </Box>
               }
-              taxReturnSx={{ color: hasHighTotalOutOfPocket ? 'warning.main' : 'primary.main' }}
+              taxReturnSx={{ color: hasHighTaxReturnCost ? 'warning.main' : 'primary.main' }}
               oneStopTint={oneStopColumnBg}
             />
           </tbody>
@@ -1066,8 +1065,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               oneStopDisabled={!isOneStopEligible}
               oneStopValue={`≈ ${formatJPY(oneStopNetBenefit)}`}
               oneStopSx={{ color: oneStopNetBenefit < 0 ? 'warning.main' : 'success.main' }}
-              taxReturnValue={`≈ ${formatJPY(netEstimatedBenefit)}`}
-              taxReturnSx={{ color: netEstimatedBenefit < 0 ? 'warning.main' : 'success.main' }}
+              taxReturnValue={`≈ ${formatJPY(taxReturnNetBenefit)}`}
+              taxReturnSx={{ color: taxReturnNetBenefit < 0 ? 'warning.main' : 'success.main' }}
               rowSx={{
                 bgcolor: netBenefitBg(desktopNetBenefitWarning),
                 '@container (max-width: 459px)': {

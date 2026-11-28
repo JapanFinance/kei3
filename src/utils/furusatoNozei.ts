@@ -18,7 +18,6 @@ import type {
   HomeLoanTaxCreditResult,
   OneStopIneligibilityReason,
   TakeHomeInputs,
-  TakeHomeResults,
 } from '../types/tax';
 
 export type { OneStopIneligibilityReason };
@@ -225,15 +224,3 @@ export const evaluateOneStopIneligibilityReasons = (
 
   return reasons;
 };
-
-/**
- * Returns the engine-evaluated reasons why the One-Stop Exception system (ワンストップ特例制度)
- * cannot be used for {@link TakeHomeResults}, or an empty array when eligible or when `oneStop`
- * is absent (e.g. zero donation limit).
- */
-export const getOneStopIneligibilityReasons = (
-  results: TakeHomeResults,
-): OneStopIneligibilityReason[] =>
-  results.furusatoNozei.oneStop && !results.furusatoNozei.oneStop.eligible
-    ? [...results.furusatoNozei.oneStop.ineligibleReasons]
-    : [];

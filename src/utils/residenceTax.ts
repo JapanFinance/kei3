@@ -727,7 +727,7 @@ function getFurusatoCapParameters(
   };
 }
 
-function computeFurusatoBaseAndSpecialParts(
+function computeFurusatoBasicAndSpecialParts(
   donationAmount: number,
   residenceTaxDetailsForCap: ResidenceTaxDetails,
   params: FurusatoCapParameters,
@@ -766,7 +766,7 @@ function computeFurusatoResidenceCreditFromParams(
   params: FurusatoCapParameters,
 ): FurusatoResidenceCreditDetails {
   const { residenceTaxDonationBasicDeduction, residenceTaxSpecialDeduction } =
-    computeFurusatoBaseAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
+    computeFurusatoBasicAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
 
   const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
   const city = Math.ceil(
@@ -792,7 +792,8 @@ function computeFurusatoResidenceCreditFromParams(
  * Each side's 申告特例控除額 equals that side's 特例控除額 multiplied by the statutory ratio
  * and ceiled to whole yen (1円未満切り上げ).
  *
- * @see https://laws.e-gov.go.jp/law/325AC0000000226
+ * @see computeFurusatoBasicAndSpecialParts
+ * @see getDeclarationSpecialCreditRatio
  */
 export function calculateFurusatoOneStopResidenceCredit(
   donationAmount: number,
@@ -814,7 +815,7 @@ export function calculateFurusatoOneStopResidenceCredit(
     residenceTaxSpecialDeduction,
     citySpecial,
     prefectureSpecial,
-  } = computeFurusatoBaseAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
+  } = computeFurusatoBasicAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
 
   const ratio = getDeclarationSpecialCreditRatio(
     residenceTaxDetailsForCap.taxableIncome,
@@ -1029,12 +1030,12 @@ export function getSpecialDeductionMultiplier(
  * One-Stop Exception system (Local Tax Act Supplementary Provisions Arts. 7-2 & 7-3).
  *
  * Uses the same `adjustedTaxableIncome` as {@link getSpecialDeductionMultiplier}.
- * @see https://laws.e-gov.go.jp/law/325AC0000000226
+ * @see DECLARATION_SPECIAL_CREDIT_RATIOS
  */
 export function getDeclarationSpecialCreditRatio(
   taxableIncome: number,
   personalDeductionDifference: number,
-  nationalBasicDeduction: number = FURUSATO_NATIONAL_BASIC_DEDUCTION_BASELINE,
+  nationalBasicDeduction: number,
 ): Rate {
   const adjustedTaxableIncome = calculateFurusatoAdjustedTaxableIncome(
     taxableIncome,

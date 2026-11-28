@@ -21,12 +21,11 @@ import {
   evaluateOneStopIneligibilityReasons,
   getFurusatoOneStopOutOfPocketCost,
   getFurusatoOutOfPocketCost,
-  getOneStopIneligibilityReasons,
   isHighOutOfPocketCost,
   type OneStopEligibilityDerived,
 } from '../utils/furusatoNozei';
 import { calculateTaxes, totalSocialInsurancePaid } from '../utils/taxCalculations';
-import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
+import { makeFurusatoNozeiDetails } from './fixtures/takeHomeResults';
 
 const baseInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -646,36 +645,5 @@ describe('evaluateOneStopIneligibilityReasons', () => {
     expect(nonzeroRealEstateWithForeignTaxOnly).toEqual(['realEstateIncome']);
     expect(rejectedYear1HomeLoan).toEqual([]);
     expect(oneYenNetTempIncome).toEqual([]);
-  });
-});
-
-describe('getOneStopIneligibilityReasons', () => {
-  it('returns engine-evaluated ineligible reasons and [] when eligible or absent', () => {
-    const ineligible = makeTakeHomeResults({
-      grossEmploymentIncome: 30_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({
-        limit: 100_000,
-        oneStop: { eligible: false, ineligibleReasons: ['homeLoanFirstYear'] },
-      }),
-    });
-    const eligible = makeTakeHomeResults({
-      furusatoNozei: makeFurusatoNozeiDetails({
-        limit: 100_000,
-        oneStop: {
-          eligible: true,
-          residenceTaxDeclarationSpecialCredit: 10_000,
-          municipalTaxCredit: 58_800,
-          prefecturalTaxCredit: 39_200,
-          residenceTaxReduction: 98_000,
-        },
-      }),
-    });
-    const absent = makeTakeHomeResults({
-      grossEmploymentIncome: 30_000_000,
-    });
-
-    expect(getOneStopIneligibilityReasons(ineligible)).toEqual(['homeLoanFirstYear']);
-    expect(getOneStopIneligibilityReasons(eligible)).toEqual([]);
-    expect(getOneStopIneligibilityReasons(absent)).toEqual([]);
   });
 });

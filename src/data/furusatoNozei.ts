@@ -50,7 +50,7 @@ export const MANDATORY_RETURN_PENSION_THRESHOLD = 4_000_000;
  * Maximum number of recipient municipalities permitted in a calendar year under the
  * Furusato Nozei One-Stop Exception system (ワンストップ特例制度).
  * Source: Local Tax Act Supplementary Provisions Art. 7(2) & (9) (地方税法附則第7条第2項・第9項).
- * @see https://laws.e-gov.go.jp/law/325AC0000000226
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226#Sp-At_7
  */
 export const ONE_STOP_MAX_MUNICIPALITIES = 5;
 
@@ -70,7 +70,8 @@ export interface DeclarationSpecialCreditRatioBand {
  *
  * Source: Local Tax Act Supplementary Provisions Arts. 7-2(2)/(5) and 7-3(1)/(2)
  * (地方税法附則第7条の2・第7条の3).
- * @see https://laws.e-gov.go.jp/law/325AC0000000226
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226#Sp-At_7_2
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226#Sp-At_7_3
  */
 export const DECLARATION_SPECIAL_CREDIT_RATIOS: ReadonlyArray<DeclarationSpecialCreditRatioBand> = [
   { maxAdjustedTaxableIncomeInclusive: 1_950_000, ratio: Rate.ofUnits(5_105, 84_895) },
