@@ -41,6 +41,7 @@ import {
   annualIncomeStreamAmount,
   countsTowardCategorySubtotal,
   getCommutingAllowanceAnnualAmount,
+  hasEmploymentIncomeStream,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
 import {
@@ -197,11 +198,14 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   const handleSaveStream = (stream: IncomeStream) => {
-    if (view.kind === 'edit') {
-      onStreamsChange(streams.map(s => (s.id === stream.id ? stream : s)));
-    } else {
-      onStreamsChange([...streams, stream]);
+    const nextStreams =
+      view.kind === 'edit'
+        ? streams.map(s => (s.id === stream.id ? stream : s))
+        : [...streams, stream];
+    if (stream.type === 'commutingAllowance' && !hasEmploymentIncomeStream(nextStreams)) {
+      return;
     }
+    onStreamsChange(nextStreams);
     showList();
   };
 
@@ -211,7 +215,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   const handleDeleteStream = (id: string) => {
-    onStreamsChange(streams.filter(s => s.id !== id));
+    const nextStreams = streams.filter(s => s.id !== id);
+    const finalStreams = hasEmploymentIncomeStream(nextStreams)
+      ? nextStreams
+      : nextStreams.filter(s => s.type !== 'commutingAllowance');
+    onStreamsChange(finalStreams);
   };
 
   const totalIncome = totalAnnualIncomeFromStreams(streams);
@@ -226,12 +234,23 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     (draftStream: IncomeStream, excludeId?: string) => {
       if (!calculationInputs) return false;
       const baseStreams = streams.filter(s => s.id !== excludeId);
-      return (
-        calculateTaxes({
-          ...calculationInputs,
-          incomeStreams: [...baseStreams, draftStream],
-        }).highIncomeMinimumTax !== undefined
-      );
+      const testStreams = [...baseStreams, draftStream];
+      if (
+        testStreams.some(s => s.type === 'commutingAllowance') &&
+        !hasEmploymentIncomeStream(testStreams)
+      ) {
+        return false;
+      }
+      try {
+        return (
+          calculateTaxes({
+            ...calculationInputs,
+            incomeStreams: testStreams,
+          }).highIncomeMinimumTax !== undefined
+        );
+      } catch {
+        return false;
+      }
     },
     [calculationInputs, streams],
   );
@@ -909,6 +928,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             onSave={handleSaveStream}
             onCancel={showList}
             isMinimumTaxTriggered={draft => checkMinimumTax(draft)}
+            hasEmploymentIncome={hasEmploymentIncomeStream(streams)}
           />
         ) : view.kind === 'edit' ? (
           <IncomeStreamForm
@@ -918,6 +938,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             onSave={handleSaveStream}
             onCancel={showList}
             isMinimumTaxTriggered={draft => checkMinimumTax(draft, view.stream.id)}
+            hasEmploymentIncome={hasEmploymentIncomeStream(
+              streams.filter(s => s.id !== view.stream.id),
+            )}
           />
         ) : (
           <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>
@@ -933,17 +956,25 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           {addMenu &&
             incomeStreamTypesInCategory(addMenu.category).map(type => {
               const atLimit = isIncomeStreamTypeAtLimit(type, streams);
+              const hasEmployment = hasEmploymentIncomeStream(streams);
+              const requiresEmployment = type === 'commutingAllowance' && !hasEmployment;
+              const disabled = atLimit || requiresEmployment;
+              const secondary = atLimit
+                ? 'Already added'
+                : requiresEmployment
+                  ? 'Requires salary, bonus, or stock compensation'
+                  : INCOME_STREAM_CATALOG[type].labelDetail;
               return (
                 <MenuItem
                   key={type}
-                  disabled={atLimit}
+                  disabled={disabled}
                   onClick={() => startAdding(type)}
                   sx={{ '&.Mui-disabled': { opacity: 1, color: 'text.disabled' } }}
                 >
                   <ListItemText
                     primary={INCOME_STREAM_CATALOG[type].label}
-                    secondary={atLimit ? 'Already added' : INCOME_STREAM_CATALOG[type].labelDetail}
-                    {...(atLimit && { slotProps: { secondary: { color: 'inherit' } } })}
+                    secondary={secondary}
+                    {...(disabled && { slotProps: { secondary: { color: 'inherit' } } })}
                   />
                 </MenuItem>
               );

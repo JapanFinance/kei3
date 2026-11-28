@@ -33,6 +33,48 @@ describe('IncomeStreamForm', () => {
     expect(frequencySelect).toHaveTextContent('1 Month');
   });
 
+  it('validates that commuting allowance requires employment income', () => {
+    render(
+      <IncomeStreamForm
+        type="commutingAllowance"
+        hasEmploymentIncome={false}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'A commuting allowance requires employment income (salary, bonus, or stock-based compensation).',
+      ),
+    ).toBeInTheDocument();
+
+    const addButton = screen.getByRole('button', { name: 'Add' });
+    expect(addButton).toBeDisabled();
+
+    fireEvent.click(addButton);
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it('validates that commuting allowance amount cannot be negative', async () => {
+    const user = userEvent.setup();
+    render(
+      <IncomeStreamForm
+        type="commutingAllowance"
+        initialData={{ id: 'c1', type: 'commutingAllowance', amount: -1000, frequency: 'monthly' }}
+        hasEmploymentIncome={true}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />,
+    );
+
+    const updateButton = screen.getByRole('button', { name: 'Update' });
+    await user.click(updateButton);
+
+    expect(mockOnSave).not.toHaveBeenCalled();
+    expect(screen.getByText('Commuting allowance cannot be negative.')).toBeInTheDocument();
+  });
+
   it('names the type in the heading for adding and for editing', () => {
     const { rerender } = render(
       <IncomeStreamForm type="bonus" onSave={mockOnSave} onCancel={mockOnCancel} />,

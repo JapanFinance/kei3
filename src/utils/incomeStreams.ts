@@ -198,10 +198,12 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
     countsTowardCategorySubtotal: false,
     annualAmount: s => s.amount * getFrequencyAnnualMultiplier(s.frequency),
     validate: s =>
-      (s.amount * getFrequencyAnnualMultiplier(s.frequency)) / 12 >
-      COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP
-        ? `Commuting allowance cannot exceed ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)}/month (non-taxable cap). For amounts exceeding this, please include the excess as part of the salary.`
-        : undefined,
+      s.amount < 0
+        ? 'Commuting allowance cannot be negative.'
+        : (s.amount * getFrequencyAnnualMultiplier(s.frequency)) / 12 >
+            COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP
+          ? `Commuting allowance cannot exceed ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)}/month (non-taxable cap). For amounts exceeding this, please include the excess as part of the salary.`
+          : undefined,
   },
   // One 特定口座（源泉徴収あり）; the account's own two flags say whether its sales and its
   // dividends are on the return (措法37条の11の5①, 37条の11の6⑨).
@@ -419,4 +421,14 @@ export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): num
     }
   }
   return total + Math.max(0, capitalGains) + Math.max(0, realEstate);
+}
+
+/**
+ * Whether `streams` includes at least one employment-type income stream
+ * (salary, bonus, or stock compensation).
+ */
+export function hasEmploymentIncomeStream(streams: readonly IncomeStream[]): boolean {
+  return streams.some(
+    s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation',
+  );
 }

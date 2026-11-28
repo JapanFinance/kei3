@@ -2525,6 +2525,128 @@ describe('Commuting Allowance', () => {
     // Annual Commuting: 120,000 * 2 = 240,000, wholly non-taxable at 20k/month
     expect(result.commutingAllowance).toBe(240_000);
   });
+
+  it('rejects a commuting allowance without employment income', () => {
+    const base = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    const commutingStream = {
+      type: 'commutingAllowance' as const,
+      amount: 10_000,
+      frequency: 'monthly' as const,
+      id: 'c1',
+    };
+
+    // Commuting allowance alone
+    expect(() =>
+      calculateTaxes({
+        ...base,
+        incomeStreams: [commutingStream],
+      }),
+    ).toThrow(
+      'A commuting allowance requires employment income (salary, bonus, or stock-based compensation).',
+    );
+
+    // Commuting allowance with business income only
+    expect(() =>
+      calculateTaxes({
+        ...base,
+        incomeStreams: [
+          { type: 'business' as const, amount: 4_000_000, id: 'b1' },
+          commutingStream,
+        ],
+      }),
+    ).toThrow(
+      'A commuting allowance requires employment income (salary, bonus, or stock-based compensation).',
+    );
+
+    // Commuting allowance with public pension only
+    expect(() =>
+      calculateTaxes({
+        ...base,
+        incomeStreams: [
+          {
+            type: 'publicPension' as const,
+            amount: 2_000_000,
+            payerDomicile: 'domestic' as const,
+            foreignTax: 0,
+            id: 'p1',
+          },
+          commutingStream,
+        ],
+      }),
+    ).toThrow(
+      'A commuting allowance requires employment income (salary, bonus, or stock-based compensation).',
+    );
+  });
+
+  it('accepts a commuting allowance when accompanied by salary, bonus, or stock compensation', () => {
+    const base = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    const commutingStream = {
+      type: 'commutingAllowance' as const,
+      amount: 10_000,
+      frequency: 'monthly' as const,
+      id: 'c1',
+    };
+
+    // With salary
+    const salaryResult = calculateTaxes({
+      ...base,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
+        commutingStream,
+      ],
+    });
+    expect(salaryResult.commutingAllowance).toBe(120_000);
+    expect(salaryResult.hasEmploymentIncome).toBe(true);
+
+    // With bonus
+    const bonusResult = calculateTaxes({
+      ...base,
+      incomeStreams: [
+        { type: 'bonus' as const, amount: 1_000_000, month: 5, id: 'b1' },
+        commutingStream,
+      ],
+    });
+    expect(bonusResult.commutingAllowance).toBe(120_000);
+    expect(bonusResult.hasEmploymentIncome).toBe(true);
+
+    // With stock compensation
+    const stockResult = calculateTaxes({
+      ...base,
+      incomeStreams: [
+        {
+          type: 'stockCompensation' as const,
+          amount: 2_000_000,
+          issuerDomicile: 'foreign' as const,
+          id: 'sc1',
+        },
+        commutingStream,
+      ],
+    });
+    expect(stockResult.commutingAllowance).toBe(120_000);
+    expect(stockResult.hasEmploymentIncome).toBe(true);
+  });
 });
 
 describe('Additional income deductions (life, earthquake, medical, other)', () => {
