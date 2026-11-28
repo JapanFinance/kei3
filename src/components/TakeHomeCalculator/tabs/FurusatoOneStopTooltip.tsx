@@ -57,11 +57,11 @@ export const FurusatoOneStopTooltip: React.FC<FurusatoOneStopTooltipProps> = ({ 
         <strong>Declaration Special Credit (申告特例控除)</strong>.
       </Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        <strong>Eligibility:</strong> Donations must go to{' '}
-        <strong>{ONE_STOP_MAX_MUNICIPALITIES} or fewer municipalities</strong> in the calendar year,
-        with an application submitted to each municipality, and the taxpayer must have no obligation
-        or reason to file an income or residence tax return (such as multiple salary payers or
-        claiming deductions outside year-end adjustment).
+        <strong>Eligibility:</strong> Furusato Nozei donations in the calendar year must be made to{' '}
+        <strong>{ONE_STOP_MAX_MUNICIPALITIES} or fewer municipalities</strong>, with a One-Stop
+        Exception application submitted for each donation. The taxpayer must have no obligation or
+        reason to file an income or residence tax return (such as multiple salary payers or claiming
+        deductions outside the year-end adjustment).
       </Typography>
       {oneStop !== undefined && !oneStop.eligible && (
         <Typography variant="body2" sx={{ mb: 1 }}>
