@@ -12,10 +12,12 @@ import {
   TEMPORARY_INCOME_SPECIAL_DEDUCTION,
 } from '../data/temporaryIncome';
 import type {
-  AdditionalDeductionItem,
+  AdditionalDeductionsResult,
   FurusatoNozeiDetails,
-  IncomeStream,
+  HighIncomeMinimumTaxResult,
+  HomeLoanTaxCreditResult,
   OneStopIneligibilityReason,
+  TakeHomeInputs,
   TakeHomeResults,
 } from '../types/tax';
 
@@ -114,8 +116,8 @@ export const estimateFurusatoTemporaryIncome = (
   };
 };
 
-export interface OneStopEligibilityInputs {
-  hasTaxableTemporaryIncome: boolean;
+export interface OneStopEligibilityDerived {
+  giftTemporaryIncome: FurusatoTemporaryIncomeEstimate;
   hasEmploymentIncome: boolean;
   grossEmploymentIncome: number;
   netEmploymentIncome: number;
@@ -123,17 +125,14 @@ export interface OneStopEligibilityInputs {
   netPublicPensionIncome: number;
   netBusinessAndMiscIncome: number;
   businessBlueFilerDeduction: number;
-  hasRealEstateIncome: boolean;
-  incomeStreams: readonly IncomeStream[];
-  hasReportedInvestmentIncome: boolean;
-  additionalDeductionItems: readonly AdditionalDeductionItem[];
-  dcPlanContributions: number;
-  familyNationalPension: number;
-  homeLoanCreditAmount: number;
-  homeLoanMoveInYear: number | undefined;
-  incomeYear: number;
-  hasForeignTaxCredit: boolean;
-  hasHighIncomeMinimumTax: boolean;
+  hasSeparateReportedInvestment: boolean;
+  aggregateDividends: number;
+  aggregateInterest: number;
+  additionalDeductions: AdditionalDeductionsResult;
+  familyNationalPension: number | undefined;
+  homeLoanTaxCredit: HomeLoanTaxCreditResult | undefined;
+  foreignTax: number;
+  highIncomeMinimumTax: HighIncomeMinimumTaxResult | undefined;
 }
 
 /**
@@ -144,35 +143,41 @@ export interface OneStopEligibilityInputs {
  * Local Tax Act Arts. 45-2 & 317-2.
  */
 export const evaluateOneStopIneligibilityReasons = (
-  params: OneStopEligibilityInputs,
+  inputs: Pick<
+    TakeHomeInputs,
+    'incomeStreams' | 'dcPlanContributions' | 'homeLoanTaxCredit' | 'incomeYear'
+  >,
+  derived: OneStopEligibilityDerived,
 ): OneStopIneligibilityReason[] => {
   const reasons: OneStopIneligibilityReason[] = [];
-  const hasHomeLoanCredit = params.homeLoanCreditAmount > 0;
+  const hasHomeLoanCredit = (derived.homeLoanTaxCredit?.availableCredit ?? 0) > 0;
 
-  if (params.hasTaxableTemporaryIncome) {
+  if (derived.giftTemporaryIncome.taxableTemporaryIncome > 0) {
     reasons.push('taxableTemporaryIncome');
   }
-  if (params.grossEmploymentIncome > MANDATORY_RETURN_SALARY_THRESHOLD) {
+  if (derived.grossEmploymentIncome > MANDATORY_RETURN_SALARY_THRESHOLD) {
     reasons.push('employmentIncomeOverThreshold');
   }
-  if (params.grossPublicPensionIncome > MANDATORY_RETURN_PENSION_THRESHOLD) {
+  if (derived.grossPublicPensionIncome > MANDATORY_RETURN_PENSION_THRESHOLD) {
     reasons.push('publicPensionOverThreshold');
   }
-  if (params.netBusinessAndMiscIncome !== 0 || params.businessBlueFilerDeduction > 0) {
+  if (derived.netBusinessAndMiscIncome !== 0 || derived.businessBlueFilerDeduction > 0) {
     reasons.push('businessOrMiscIncome');
   }
-  if (params.hasRealEstateIncome) {
+  if (
+    inputs.incomeStreams.some(s => s.type === 'realEstate' && (s.amount !== 0 || s.foreignTax > 0))
+  ) {
     reasons.push('realEstateIncome');
   }
   if (
-    params.incomeStreams.some(
+    inputs.incomeStreams.some(
       s => s.type === 'stockCompensation' && s.amount > 0 && s.issuerDomicile === 'foreign',
     )
   ) {
     reasons.push('foreignStockCompensation');
   }
   if (
-    params.incomeStreams.some(
+    inputs.incomeStreams.some(
       s => s.type === 'publicPension' && s.amount > 0 && s.payerDomicile === 'foreign',
     )
   ) {
@@ -183,34 +188,38 @@ export const evaluateOneStopIneligibilityReasons = (
   // taxpayers with no income outside salary OR no income outside public pension
   // (給与所得以外の所得又は公的年金等に係る所得以外の所得を有しなかったもの); positive net
   // income in both categories falls outside the statutory exemption even when ≤ ¥200,000.
-  if (params.netEmploymentIncome > 0 && params.netPublicPensionIncome > 0) {
+  if (derived.netEmploymentIncome > 0 && derived.netPublicPensionIncome > 0) {
     reasons.push('employmentAndPublicPension');
   }
   if (
-    !params.hasEmploymentIncome &&
-    params.grossPublicPensionIncome > 0 &&
-    (params.dcPlanContributions > 0 ||
-      params.additionalDeductionItems.some(
+    !derived.hasEmploymentIncome &&
+    derived.grossPublicPensionIncome > 0 &&
+    (Math.max(0, inputs.dcPlanContributions || 0) > 0 ||
+      derived.additionalDeductions.items.some(
         item => item.key === 'lifeInsurance' || item.key === 'earthquakeInsurance',
       ) ||
       hasHomeLoanCredit ||
-      params.familyNationalPension > 0)
+      (derived.familyNationalPension ?? 0) > 0)
   ) {
     reasons.push('pensionerUnwithheldDeductions');
   }
-  if (params.hasReportedInvestmentIncome) {
+  if (
+    derived.hasSeparateReportedInvestment ||
+    derived.aggregateDividends > 0 ||
+    derived.aggregateInterest > 0
+  ) {
     reasons.push('reportedInvestmentIncome');
   }
-  if (params.additionalDeductionItems.some(item => item.key === 'medical')) {
+  if (derived.additionalDeductions.items.some(item => item.key === 'medical')) {
     reasons.push('medicalExpensesDeduction');
   }
-  if (hasHomeLoanCredit && params.homeLoanMoveInYear === params.incomeYear) {
+  if (hasHomeLoanCredit && inputs.homeLoanTaxCredit?.moveInYear === inputs.incomeYear) {
     reasons.push('homeLoanFirstYear');
   }
-  if (params.hasForeignTaxCredit) {
+  if (derived.foreignTax > 0) {
     reasons.push('foreignTaxCredit');
   }
-  if (params.hasHighIncomeMinimumTax) {
+  if (derived.highIncomeMinimumTax !== undefined) {
     reasons.push('highIncomeMinimumTax');
   }
 

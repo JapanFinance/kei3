@@ -9,7 +9,13 @@ import {
   LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
-import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import {
+  DEFAULT_INCOME_YEAR,
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  type HighIncomeMinimumTaxResult,
+  type HomeLoanTaxCreditResult,
+  type TakeHomeInputs,
+} from '../types/tax';
 import {
   estimateFurusatoTemporaryIncome,
   evaluateOneStopIneligibilityReasons,
@@ -17,7 +23,7 @@ import {
   getFurusatoOutOfPocketCost,
   getOneStopIneligibilityReasons,
   isHighOutOfPocketCost,
-  type OneStopEligibilityInputs,
+  type OneStopEligibilityDerived,
 } from '../utils/furusatoNozei';
 import { calculateTaxes, totalSocialInsurancePaid } from '../utils/taxCalculations';
 import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
@@ -439,8 +445,17 @@ describe('taxCalculations Furusato Nozei temporary income integration', () => {
 });
 
 describe('evaluateOneStopIneligibilityReasons', () => {
-  const baseEligibilityInputs: OneStopEligibilityInputs = {
-    hasTaxableTemporaryIncome: false,
+  const baseEligibilityInputs: Pick<
+    TakeHomeInputs,
+    'incomeStreams' | 'dcPlanContributions' | 'homeLoanTaxCredit' | 'incomeYear'
+  > = {
+    incomeStreams: [{ id: 's1', type: 'salary', amount: 6_000_000, frequency: 'annual' }],
+    dcPlanContributions: 0,
+    incomeYear: 2026,
+  };
+
+  const baseDerived: OneStopEligibilityDerived = {
+    giftTemporaryIncome: estimateFurusatoTemporaryIncome(60_000),
     hasEmploymentIncome: true,
     grossEmploymentIncome: 6_000_000,
     netEmploymentIncome: 4_360_000,
@@ -448,33 +463,46 @@ describe('evaluateOneStopIneligibilityReasons', () => {
     netPublicPensionIncome: 0,
     netBusinessAndMiscIncome: 0,
     businessBlueFilerDeduction: 0,
-    hasRealEstateIncome: false,
-    incomeStreams: [{ id: 's1', type: 'salary', amount: 6_000_000, frequency: 'annual' }],
-    hasReportedInvestmentIncome: false,
-    additionalDeductionItems: [],
-    dcPlanContributions: 0,
-    familyNationalPension: 0,
-    homeLoanCreditAmount: 0,
-    homeLoanMoveInYear: undefined,
-    incomeYear: 2026,
-    hasForeignTaxCredit: false,
-    hasHighIncomeMinimumTax: false,
+    hasSeparateReportedInvestment: false,
+    aggregateDividends: 0,
+    aggregateInterest: 0,
+    additionalDeductions: { national: 0, residence: 0, items: [] },
+    familyNationalPension: undefined,
+    homeLoanTaxCredit: undefined,
+    foreignTax: 0,
+    highIncomeMinimumTax: undefined,
+  };
+
+  const appliedHomeLoanResult: HomeLoanTaxCreditResult = {
+    availableCredit: 200_000,
+    appliedToIncomeTax: 200_000,
+    appliedToResidenceTax: 0,
+    unusedCredit: 0,
+    warnings: [],
+  };
+
+  const rejectedHomeLoanResult: HomeLoanTaxCreditResult = {
+    availableCredit: 0,
+    appliedToIncomeTax: 0,
+    appliedToResidenceTax: 0,
+    unusedCredit: 0,
+    warnings: ['rejected'],
   };
 
   it('returns empty array for an ordinary salary earner with non-taxable gift benefit', () => {
-    expect(evaluateOneStopIneligibilityReasons(baseEligibilityInputs)).toEqual([]);
+    expect(evaluateOneStopIneligibilityReasons(baseEligibilityInputs, baseDerived)).toEqual([]);
   });
 
   it('enforces exact statutory thresholds for salary, pension, and combined net income', () => {
-    const atThresholds = evaluateOneStopIneligibilityReasons({
-      ...baseEligibilityInputs,
+    const atThresholds = evaluateOneStopIneligibilityReasons(baseEligibilityInputs, {
+      ...baseDerived,
       grossEmploymentIncome: 20_000_000,
       netEmploymentIncome: 18_050_000,
       grossPublicPensionIncome: 4_000_000,
       netPublicPensionIncome: 0,
     });
-    const overThresholds = evaluateOneStopIneligibilityReasons({
-      ...baseEligibilityInputs,
+    const overThresholds = evaluateOneStopIneligibilityReasons(baseEligibilityInputs, {
+      ...baseDerived,
       grossEmploymentIncome: 20_000_001,
       netEmploymentIncome: 18_050_001,
       grossPublicPensionIncome: 4_000_001,
@@ -490,30 +518,43 @@ describe('evaluateOneStopIneligibilityReasons', () => {
   });
 
   it('detects all statutory income, deduction, and tax credit disqualifiers', () => {
-    const reasons = evaluateOneStopIneligibilityReasons({
-      ...baseEligibilityInputs,
-      hasTaxableTemporaryIncome: true,
-      netBusinessAndMiscIncome: -100_000,
-      businessBlueFilerDeduction: 100_000,
-      hasRealEstateIncome: true,
-      incomeStreams: [
-        { id: 'sc1', type: 'stockCompensation', amount: 1_000_000, issuerDomicile: 'foreign' },
-        {
-          id: 'pp1',
-          type: 'publicPension',
-          amount: 1_500_000,
-          payerDomicile: 'foreign',
-          treatyCredit: 'unavailable',
-          foreignTax: 0,
+    const reasons = evaluateOneStopIneligibilityReasons(
+      {
+        ...baseEligibilityInputs,
+        incomeStreams: [
+          { id: 're1', type: 'realEstate', amount: 250_000, location: 'domestic', foreignTax: 0 },
+          { id: 'sc1', type: 'stockCompensation', amount: 1_000_000, issuerDomicile: 'foreign' },
+          {
+            id: 'pp1',
+            type: 'publicPension',
+            amount: 1_500_000,
+            payerDomicile: 'foreign',
+            treatyCredit: 'unavailable',
+            foreignTax: 0,
+          },
+        ],
+        homeLoanTaxCredit: { moveInYear: 2026, creditAmount: 200_000 },
+      },
+      {
+        ...baseDerived,
+        giftTemporaryIncome: {
+          ...baseDerived.giftTemporaryIncome,
+          netTemporaryIncome: 100_000,
+          taxableTemporaryIncome: 50_000,
         },
-      ],
-      hasReportedInvestmentIncome: true,
-      additionalDeductionItems: [{ key: 'medical', national: 50_000, residence: 50_000 }],
-      homeLoanCreditAmount: 200_000,
-      homeLoanMoveInYear: 2026,
-      hasForeignTaxCredit: true,
-      hasHighIncomeMinimumTax: true,
-    });
+        netBusinessAndMiscIncome: -100_000,
+        businessBlueFilerDeduction: 100_000,
+        hasSeparateReportedInvestment: true,
+        additionalDeductions: {
+          national: 50_000,
+          residence: 50_000,
+          items: [{ key: 'medical', national: 50_000, residence: 50_000 }],
+        },
+        homeLoanTaxCredit: appliedHomeLoanResult,
+        foreignTax: 10_000,
+        highIncomeMinimumTax: {} as HighIncomeMinimumTaxResult,
+      },
+    );
 
     expect(reasons).toEqual([
       'taxableTemporaryIncome',
@@ -530,25 +571,81 @@ describe('evaluateOneStopIneligibilityReasons', () => {
   });
 
   it('flags pensioner unwithheld deductions when not employed and ignores Year 2+ home loan', () => {
-    const pensionerWithIdeco = evaluateOneStopIneligibilityReasons({
-      ...baseEligibilityInputs,
-      hasEmploymentIncome: false,
-      grossEmploymentIncome: 0,
-      netEmploymentIncome: 0,
-      grossPublicPensionIncome: 3_500_000,
-      netPublicPensionIncome: 2_400_000,
-      dcPlanContributions: 120_000,
-      homeLoanCreditAmount: 200_000,
-      homeLoanMoveInYear: 2024,
-    });
-    const salaryYear2HomeLoan = evaluateOneStopIneligibilityReasons({
-      ...baseEligibilityInputs,
-      homeLoanCreditAmount: 200_000,
-      homeLoanMoveInYear: 2024,
-    });
+    const pensionerWithIdeco = evaluateOneStopIneligibilityReasons(
+      {
+        ...baseEligibilityInputs,
+        dcPlanContributions: 120_000,
+        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 200_000 },
+      },
+      {
+        ...baseDerived,
+        hasEmploymentIncome: false,
+        grossEmploymentIncome: 0,
+        netEmploymentIncome: 0,
+        grossPublicPensionIncome: 3_500_000,
+        netPublicPensionIncome: 2_400_000,
+        homeLoanTaxCredit: appliedHomeLoanResult,
+      },
+    );
+    const salaryYear2HomeLoan = evaluateOneStopIneligibilityReasons(
+      {
+        ...baseEligibilityInputs,
+        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 200_000 },
+      },
+      {
+        ...baseDerived,
+        homeLoanTaxCredit: appliedHomeLoanResult,
+      },
+    );
 
     expect(pensionerWithIdeco).toEqual(['pensionerUnwithheldDeductions']);
     expect(salaryYear2HomeLoan).toEqual([]);
+  });
+
+  it('ignores zero-amount real estate streams, rejected home loan credits, and 1-yen temporary income rounding to ¥0', () => {
+    const zeroRealEstate = evaluateOneStopIneligibilityReasons(
+      {
+        ...baseEligibilityInputs,
+        incomeStreams: [
+          ...baseEligibilityInputs.incomeStreams,
+          { id: 're-zero', type: 'realEstate', amount: 0, location: 'domestic', foreignTax: 0 },
+        ],
+      },
+      baseDerived,
+    );
+    const nonzeroRealEstateWithForeignTaxOnly = evaluateOneStopIneligibilityReasons(
+      {
+        ...baseEligibilityInputs,
+        incomeStreams: [
+          ...baseEligibilityInputs.incomeStreams,
+          { id: 're-ft', type: 'realEstate', amount: 0, location: 'foreign', foreignTax: 5_000 },
+        ],
+      },
+      baseDerived,
+    );
+    const rejectedYear1HomeLoan = evaluateOneStopIneligibilityReasons(
+      {
+        ...baseEligibilityInputs,
+        homeLoanTaxCredit: { moveInYear: 2026, creditAmount: 200_000 },
+      },
+      {
+        ...baseDerived,
+        homeLoanTaxCredit: rejectedHomeLoanResult,
+      },
+    );
+    const oneYenNetTempIncome = evaluateOneStopIneligibilityReasons(baseEligibilityInputs, {
+      ...baseDerived,
+      giftTemporaryIncome: {
+        ...baseDerived.giftTemporaryIncome,
+        netTemporaryIncome: 1,
+        taxableTemporaryIncome: 0,
+      },
+    });
+
+    expect(zeroRealEstate).toEqual([]);
+    expect(nonzeroRealEstateWithForeignTaxOnly).toEqual(['realEstateIncome']);
+    expect(rejectedYear1HomeLoan).toEqual([]);
+    expect(oneYenNetTempIncome).toEqual([]);
   });
 });
 
