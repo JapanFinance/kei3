@@ -737,8 +737,10 @@ function computeFurusatoBasicAndSpecialParts(
     0,
   );
 
-  const residenceTaxDonationBasicDeduction =
-    DONATION_BASIC_DEDUCTION_RATE.taxOn(deductibleDonation);
+  // Local Tax Act Arts. 314-7(1) (municipal 6%) & 37-2(1) (prefectural 4%), 1円未満切り上げ.
+  const cityBasic = CITY_RESIDENCE_TAX_RATE.ceilOn(deductibleDonation);
+  const prefectureBasic = PREFECTURAL_RESIDENCE_TAX_RATE.ceilOn(deductibleDonation);
+  const residenceTaxDonationBasicDeduction = cityBasic + prefectureBasic;
 
   const unsplitSpecialDeduction = Math.min(
     deductibleDonation * params.specialDeductionRate.toDecimal(),
@@ -755,6 +757,8 @@ function computeFurusatoBasicAndSpecialParts(
   return {
     residenceTaxDonationBasicDeduction,
     residenceTaxSpecialDeduction,
+    cityBasic,
+    prefectureBasic,
     citySpecial,
     prefectureSpecial,
   };
@@ -765,22 +769,20 @@ function computeFurusatoResidenceCreditFromParams(
   residenceTaxDetailsForCap: ResidenceTaxDetails,
   params: FurusatoCapParameters,
 ): FurusatoResidenceCreditDetails {
-  const { residenceTaxDonationBasicDeduction, residenceTaxSpecialDeduction } =
-    computeFurusatoBasicAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
-
-  const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
-  const city = Math.ceil(
-    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.cityProportion.toDecimal(),
-  );
-  const prefecture = Math.ceil(
-    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.prefecturalProportion.toDecimal(),
-  );
+  const {
+    residenceTaxDonationBasicDeduction,
+    residenceTaxSpecialDeduction,
+    cityBasic,
+    prefectureBasic,
+    citySpecial,
+    prefectureSpecial,
+  } = computeFurusatoBasicAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
 
   return {
     residenceTaxDonationBasicDeduction,
     residenceTaxSpecialDeduction,
-    city,
-    prefecture,
+    city: cityBasic + citySpecial,
+    prefecture: prefectureBasic + prefectureSpecial,
   };
 }
 
@@ -813,6 +815,8 @@ export function calculateFurusatoOneStopResidenceCredit(
   const {
     residenceTaxDonationBasicDeduction,
     residenceTaxSpecialDeduction,
+    cityBasic,
+    prefectureBasic,
     citySpecial,
     prefectureSpecial,
   } = computeFurusatoBasicAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
@@ -825,14 +829,6 @@ export function calculateFurusatoOneStopResidenceCredit(
   const cityDeclarationSpecial = ratio.ceilOn(citySpecial);
   const prefectureDeclarationSpecial = ratio.ceilOn(prefectureSpecial);
   const declarationSpecialCredit = cityDeclarationSpecial + prefectureDeclarationSpecial;
-
-  const cityBasic = Math.ceil(
-    residenceTaxDonationBasicDeduction * residenceTaxDetailsForCap.cityProportion.toDecimal(),
-  );
-  const prefectureBasic = Math.ceil(
-    residenceTaxDonationBasicDeduction *
-      residenceTaxDetailsForCap.prefecturalProportion.toDecimal(),
-  );
 
   return {
     residenceTaxDonationBasicDeduction,

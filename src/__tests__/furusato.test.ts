@@ -786,10 +786,24 @@ describe('calculateFurusatoNozeiLimit', () => {
         baseline.furusatoNozei.residenceTaxSpecialDeduction,
       );
       expect(oneStopCredits.declarationSpecialCredit).toBeGreaterThan(0);
-      expect(oneStopCredits.city + oneStopCredits.prefecture).toBeGreaterThanOrEqual(
+      expect(oneStopCredits.city + oneStopCredits.prefecture).toBe(
         oneStopCredits.residenceTaxDonationBasicDeduction +
           oneStopCredits.residenceTaxSpecialDeduction +
           oneStopCredits.declarationSpecialCredit,
+      );
+
+      // Non-round donation (deductible = 8,010): ceil(8,010 * 6%) = 481, ceil(8,010 * 4%) = 321 -> 802
+      const oddDonationCredits = calculateFurusatoOneStopResidenceCredit(
+        10_010,
+        baseline.residenceTax,
+        2026,
+        baseline.nationalIncomeTaxBasicDeduction!,
+      );
+      expect(oddDonationCredits.residenceTaxDonationBasicDeduction).toBe(802);
+      expect(oddDonationCredits.city + oddDonationCredits.prefecture).toBe(
+        oddDonationCredits.residenceTaxDonationBasicDeduction +
+          oddDonationCredits.residenceTaxSpecialDeduction +
+          oddDonationCredits.declarationSpecialCredit,
       );
     });
 
