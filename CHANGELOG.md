@@ -6,7 +6,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### New
 
-- Added side-by-side comparison of **One-Stop Exception** ([ワンストップ特例制度](https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/mechanism/procedure.html)) and **Tax Return** (確定申告) Furusato Nozei results on the Furusato Nozei tab (using a compact filing-method toggle on narrow screens), disabling the One-Stop option and detailing detected filing triggers in its tooltip when the tax profile requires filing a return.
+- Added comparison of the **One-Stop Exception** ([ワンストップ特例制度](https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/mechanism/procedure.html)) and **Tax Return** filing methods on the Furusato Nozei tab. The One-Stop option is disabled when the entered tax profile requires filing a return. See details in the tooltips.
 - Added Gift Temporary Income Effect ([一時所得](https://www.nta.go.jp/law/shitsugi/shotoku/02/37.htm)) breakdown in the Furusato Nozei tab for return gifts. When the estimated economic benefit of gifts exceeds the ¥500,000 special deduction for temporary income, the resulting incremental tax effect is shown in the Cost Breakdown.
 
 ## 2026-11-27: Fix Furusato Nozei limit for 2026 basic deduction increase
