@@ -52,15 +52,16 @@ const TEMPORARY_INCOME_SOURCES: Source[] = [
 
 interface FurusatoTemporaryIncomeTooltipProps {
   estimate: FurusatoTemporaryIncomeEstimate;
+  hasCost: boolean;
 }
 
 export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeTooltipProps> = ({
   estimate,
+  hasCost,
 }) => {
   const giftsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
   const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
   const combinedPct = FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE.toPercent(1);
-  const hasCost = estimate.additionalTotalCost > 0;
   const hasNetTempIncome = estimate.netTemporaryIncome > 0;
 
   return (

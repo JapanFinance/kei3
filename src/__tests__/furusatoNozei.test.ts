@@ -15,15 +15,10 @@ import {
   type SeparateTaxationReportedIncome,
 } from '../types/tax';
 import {
-  estimateFurusatoEconomicBenefit,
   estimateFurusatoTemporaryIncome,
-  getFurusatoDonationOutOfPocketCost,
   getFurusatoOutOfPocketCost,
   getOneStopIneligibilityReasons,
-  hasFurusatoTemporaryIncomeCost,
-  hasHighDonationOutOfPocketCost,
-  hasHighOutOfPocketCost,
-  hasTaxableFurusatoTemporaryIncome,
+  isHighOutOfPocketCost,
 } from '../utils/furusatoNozei';
 import { calculateTaxes, totalSocialInsurancePaid } from '../utils/taxCalculations';
 import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
@@ -43,75 +38,8 @@ const baseInputs = {
   incomeYear: DEFAULT_INCOME_YEAR,
 };
 
-describe('estimateFurusatoEconomicBenefit', () => {
-  it('returns zeros when donation amount is zero or negative', () => {
-    expect(estimateFurusatoEconomicBenefit(0)).toEqual({
-      estimatedGiftsValue: 0,
-      estimatedShippingCost: 0,
-      estimatedEconomicBenefit: 0,
-    });
-    expect(estimateFurusatoEconomicBenefit(-10_000)).toEqual({
-      estimatedGiftsValue: 0,
-      estimatedShippingCost: 0,
-      estimatedEconomicBenefit: 0,
-    });
-  });
-
-  it('estimates gifts (26.5%) and shipping (5.7%) and reconciles total economic benefit', () => {
-    const benefit = estimateFurusatoEconomicBenefit(60_000);
-
-    expect(benefit.estimatedGiftsValue).toBe(15_900);
-    expect(benefit.estimatedShippingCost).toBe(3_420);
-    expect(benefit.estimatedEconomicBenefit).toBe(19_320);
-    expect(benefit.estimatedGiftsValue + benefit.estimatedShippingCost).toBe(
-      benefit.estimatedEconomicBenefit,
-    );
-  });
-});
-
-describe('hasTaxableFurusatoTemporaryIncome and hasFurusatoTemporaryIncomeCost', () => {
-  it('reads whether the engine populated temporaryIncomeEffect and whether it has non-zero cost', () => {
-    const withoutEffect = makeFurusatoNozeiDetails({ limit: 2_200_000 });
-    const withZeroEffect = makeFurusatoNozeiDetails({
-      limit: 2_200_000,
-      temporaryIncomeEffect: { nationalIncomeTax: 0, residenceTax: 0, total: 0 },
-    });
-    const withTaxEffect = makeFurusatoNozeiDetails({
-      limit: 2_200_000,
-      temporaryIncomeEffect: { nationalIncomeTax: 47_800, residenceTax: 10_400, total: 58_200 },
-    });
-    const withSocialInsuranceEffect = makeFurusatoNozeiDetails({
-      limit: 150_000,
-      temporaryIncomeEffect: {
-        nationalIncomeTax: -2_800,
-        residenceTax: -1_300,
-        socialInsurance: 17_900,
-        total: 13_800,
-      },
-    });
-
-    expect(hasTaxableFurusatoTemporaryIncome(withoutEffect)).toBe(false);
-    expect(hasTaxableFurusatoTemporaryIncome(withZeroEffect)).toBe(true);
-    expect(hasTaxableFurusatoTemporaryIncome(withTaxEffect)).toBe(true);
-    expect(hasTaxableFurusatoTemporaryIncome(withSocialInsuranceEffect)).toBe(true);
-
-    expect(hasFurusatoTemporaryIncomeCost(withoutEffect)).toBe(false);
-    expect(hasFurusatoTemporaryIncomeCost(withZeroEffect)).toBe(false);
-    expect(hasFurusatoTemporaryIncomeCost(withTaxEffect)).toBe(true);
-    expect(hasFurusatoTemporaryIncomeCost(withSocialInsuranceEffect)).toBe(true);
-  });
-
-  it('matches the ¥500,000 benefit threshold in the tax engine', () => {
-    const below = estimateFurusatoEconomicBenefit(1_552_000);
-    const above = estimateFurusatoEconomicBenefit(1_553_000);
-
-    expect(below.estimatedEconomicBenefit).toBe(499_744);
-    expect(above.estimatedEconomicBenefit).toBe(500_066);
-  });
-});
-
-describe('Furusato out-of-pocket cost helpers', () => {
-  it('computes donation-only and total out-of-pocket cost with temporary income effect', () => {
+describe('getFurusatoOutOfPocketCost and isHighOutOfPocketCost', () => {
+  it('computes total out-of-pocket cost including temporaryIncomeEffect', () => {
     const furusatoNozei = makeFurusatoNozeiDetails({
       limit: 2_101_000,
       incomeTaxReduction: 964_300,
@@ -119,13 +47,11 @@ describe('Furusato out-of-pocket cost helpers', () => {
       temporaryIncomeEffect: { nationalIncomeTax: 40_400, residenceTax: 8_800, total: 49_200 },
     });
 
-    expect(getFurusatoDonationOutOfPocketCost(furusatoNozei)).toBe(2_100);
     expect(getFurusatoOutOfPocketCost(furusatoNozei)).toBe(51_300);
-    expect(hasHighDonationOutOfPocketCost(furusatoNozei)).toBe(false);
-    expect(hasHighOutOfPocketCost(furusatoNozei)).toBe(true);
+    expect(isHighOutOfPocketCost(getFurusatoOutOfPocketCost(furusatoNozei))).toBe(true);
   });
 
-  it('flags nominal vs high donation out-of-pocket costs at the ¥2,200 margin', () => {
+  it('flags costs above the ¥2,200 rounding margin', () => {
     const nominal = makeFurusatoNozeiDetails({
       limit: 77_000,
       incomeTaxReduction: 7_600,
@@ -137,62 +63,71 @@ describe('Furusato out-of-pocket cost helpers', () => {
       residenceTaxReduction: 76_400,
     });
 
-    expect(hasHighDonationOutOfPocketCost(nominal)).toBe(false);
-    expect(hasHighOutOfPocketCost(nominal)).toBe(false);
-    expect(hasHighDonationOutOfPocketCost(highDonation)).toBe(true);
-    expect(hasHighOutOfPocketCost(highDonation)).toBe(true);
+    expect(isHighOutOfPocketCost(2_200)).toBe(false);
+    expect(isHighOutOfPocketCost(2_201)).toBe(true);
+    expect(isHighOutOfPocketCost(getFurusatoOutOfPocketCost(nominal))).toBe(false);
+    expect(isHighOutOfPocketCost(getFurusatoOutOfPocketCost(highDonation))).toBe(true);
   });
 });
 
 describe('estimateFurusatoTemporaryIncome', () => {
-  it('leaves taxable temporary income and additional cost at zero below ¥500,000', () => {
-    const furusatoNozei = makeFurusatoNozeiDetails({
-      limit: 60_000,
-      incomeTaxReduction: 5_800,
-      residenceTaxReduction: 52_200,
+  it('returns zeros for gift benefit and taxable income when donation amount is zero or negative', () => {
+    expect(estimateFurusatoTemporaryIncome(0)).toEqual({
+      estimatedGiftsValue: 0,
+      estimatedShippingCost: 0,
+      estimatedEconomicBenefit: 0,
+      specialDeduction: 500_000,
+      remainingDeductionAllowance: 500_000,
+      netTemporaryIncome: 0,
+      taxableTemporaryIncome: 0,
     });
+    expect(estimateFurusatoTemporaryIncome(-10_000)).toEqual({
+      estimatedGiftsValue: 0,
+      estimatedShippingCost: 0,
+      estimatedEconomicBenefit: 0,
+      specialDeduction: 500_000,
+      remainingDeductionAllowance: 500_000,
+      netTemporaryIncome: 0,
+      taxableTemporaryIncome: 0,
+    });
+  });
 
-    const estimate = estimateFurusatoTemporaryIncome(furusatoNozei);
+  it('estimates gifts (26.5%) and shipping (5.7%), reconciles benefit, and tracks remaining allowance below ¥500,000', () => {
+    const estimate = estimateFurusatoTemporaryIncome(60_000);
 
-    expect(estimate.isTaxable).toBe(false);
+    expect(estimate.estimatedGiftsValue).toBe(15_900);
+    expect(estimate.estimatedShippingCost).toBe(3_420);
+    expect(estimate.estimatedEconomicBenefit).toBe(19_320);
+    expect(estimate.estimatedGiftsValue + estimate.estimatedShippingCost).toBe(
+      estimate.estimatedEconomicBenefit,
+    );
     expect(estimate.remainingDeductionAllowance).toBe(480_680);
     expect(estimate.netTemporaryIncome).toBe(0);
     expect(estimate.taxableTemporaryIncome).toBe(0);
-    expect(estimate.additionalNationalIncomeTax).toBe(0);
-    expect(estimate.additionalResidenceTax).toBe(0);
-    expect(estimate.additionalSocialInsurance).toBe(0);
-    expect(estimate.additionalTotalCost).toBe(0);
   });
 
-  it('floors ½ taxable temporary income to whole yen and surfaces engine effect breakdown', () => {
-    const furusatoNozei = makeFurusatoNozeiDetails({
-      limit: 1_553_005,
-      incomeTaxReduction: 633_000,
-      residenceTaxReduction: 918_005,
-      temporaryIncomeEffect: { nationalIncomeTax: 100, residenceTax: 0, total: 100 },
-    });
+  it('matches the ¥500,000 benefit threshold in the tax engine', () => {
+    const below = estimateFurusatoTemporaryIncome(1_552_000);
+    const above = estimateFurusatoTemporaryIncome(1_553_000);
 
-    const estimate = estimateFurusatoTemporaryIncome(furusatoNozei);
+    expect(below.estimatedEconomicBenefit).toBe(499_744);
+    expect(below.netTemporaryIncome).toBe(0);
+    expect(above.estimatedEconomicBenefit).toBe(500_066);
+    expect(above.netTemporaryIncome).toBe(66);
+  });
+
+  it('floors ½ taxable temporary income to whole yen above ¥500,000', () => {
+    const estimate = estimateFurusatoTemporaryIncome(1_553_005);
 
     expect(estimate.estimatedEconomicBenefit).toBe(500_067);
+    expect(estimate.remainingDeductionAllowance).toBe(0);
     expect(estimate.netTemporaryIncome).toBe(67);
     expect(estimate.taxableTemporaryIncome).toBe(33);
-    expect(estimate.isTaxable).toBe(true);
-    expect(estimate.additionalNationalIncomeTax).toBe(100);
-    expect(estimate.additionalResidenceTax).toBe(0);
-    expect(estimate.additionalSocialInsurance).toBe(0);
-    expect(estimate.additionalTotalCost).toBe(100);
   });
 
   it('computes incremental net and ½ taxable temporary income when prior temporary income shares the ¥500,000 deduction', () => {
-    const furusatoNozei = makeFurusatoNozeiDetails({
-      limit: 60_000,
-      incomeTaxReduction: 5_800,
-      residenceTaxReduction: 52_200,
-    });
-
-    const straddling = estimateFurusatoTemporaryIncome(furusatoNozei, 490_000);
-    const alreadyAbove = estimateFurusatoTemporaryIncome(furusatoNozei, 500_001);
+    const straddling = estimateFurusatoTemporaryIncome(60_000, 490_000);
+    const alreadyAbove = estimateFurusatoTemporaryIncome(60_000, 500_001);
 
     // 490,000 + 19,320 = 509,320 -> net = 9,320; ½ = 4,660
     expect(straddling.remainingDeductionAllowance).toBe(0);
@@ -263,7 +198,7 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
 
     const results = calculateTaxes(highInputs);
     const limit = results.furusatoNozei.limit;
-    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const benefit = estimateFurusatoTemporaryIncome(limit);
     const withDonationOnly = calculateTaxes({ ...highInputs, furusatoDonation: limit });
     const withDonationAndTemp = calculateTaxes({
       ...highInputs,
@@ -297,7 +232,7 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
 
     const baseline = calculateTaxes(bracketShiftInputs);
     const limit = baseline.furusatoNozei.limit;
-    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const benefit = estimateFurusatoTemporaryIncome(limit);
     const joint = calculateTaxes({
       ...bracketShiftInputs,
       furusatoDonation: limit,
@@ -327,7 +262,7 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
       [aboveThresholdInputs, above],
     ] as const) {
       const limit = results.furusatoNozei.limit;
-      const benefit = estimateFurusatoEconomicBenefit(limit);
+      const benefit = estimateFurusatoTemporaryIncome(limit);
       expect(benefit.estimatedEconomicBenefit).toBeLessThan(500_000);
       expect(inputs.temporaryIncome + benefit.estimatedEconomicBenefit).toBeGreaterThan(500_000);
 
@@ -366,7 +301,7 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
 
     const baseline = calculateTaxes(nhiInputs);
     const limit = baseline.furusatoNozei.limit;
-    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const benefit = estimateFurusatoTemporaryIncome(limit);
     const withDonationOnly = calculateTaxes({ ...nhiInputs, furusatoDonation: limit });
     const withDonationAndTemp = calculateTaxes({
       ...nhiInputs,
@@ -407,7 +342,7 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
 
     const baseline = calculateTaxes(elderlyInputs);
     const limit = baseline.furusatoNozei.limit;
-    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const benefit = estimateFurusatoTemporaryIncome(limit);
     const withDonationOnly = calculateTaxes({ ...elderlyInputs, furusatoDonation: limit });
     const withDonationAndTemp = calculateTaxes({
       ...elderlyInputs,
@@ -445,7 +380,7 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
 
     const baseline = calculateTaxes(ltcCliffInputs);
     const limit = baseline.furusatoNozei.limit;
-    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const benefit = estimateFurusatoTemporaryIncome(limit);
     const joint = calculateTaxes({
       ...ltcCliffInputs,
       furusatoDonation: limit,
@@ -487,7 +422,7 @@ describe('taxCalculations temporaryIncome and Furusato Nozei integration', () =>
 
     const results = calculateTaxes(minTaxInputs);
     const limit = results.furusatoNozei.limit;
-    const benefit = estimateFurusatoEconomicBenefit(limit);
+    const benefit = estimateFurusatoTemporaryIncome(limit);
     const withDonationOnly = calculateTaxes({ ...minTaxInputs, furusatoDonation: limit });
     const withDonationAndTemp = calculateTaxes({
       ...minTaxInputs,

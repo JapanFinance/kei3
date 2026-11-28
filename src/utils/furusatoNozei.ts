@@ -17,15 +17,8 @@ import type { FurusatoNozeiDetails, TakeHomeResults } from '../types/tax';
 // credits are floored to 100 yen separately for the municipal and prefectural
 // portions, so an ordinary result lands up to about 200 yen above the nominal
 // figure; only a cost above that margin means the bracket shift, credit interaction,
-// or temporary income tax on the Furusato Nozei tab has actually raised the cost.
+// or temporary income effect on the Furusato Nozei tab has actually raised the cost.
 const OUT_OF_POCKET_WARNING_THRESHOLD = 2200;
-
-/**
- * Out-of-pocket cost from the donation and its tax reductions alone, excluding any
- * temporary income tax on return gifts.
- */
-export const getFurusatoDonationOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): number =>
-  furusatoNozei.limit - furusatoNozei.incomeTaxReduction - furusatoNozei.residenceTaxReduction;
 
 /**
  * Total estimated out-of-pocket cost: donation amount minus income/residence tax
@@ -33,29 +26,24 @@ export const getFurusatoDonationOutOfPocketCost = (furusatoNozei: FurusatoNozeiD
  * return gifts.
  */
 export const getFurusatoOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): number =>
-  getFurusatoDonationOutOfPocketCost(furusatoNozei) +
+  furusatoNozei.limit -
+  furusatoNozei.incomeTaxReduction -
+  furusatoNozei.residenceTaxReduction +
   (furusatoNozei.temporaryIncomeEffect?.total ?? 0);
 
 /**
- * Returns true when the base donation out-of-pocket cost (before temporary income effect)
- * exceeds the nominal ¥2,200 rounding margin.
+ * Returns true when an out-of-pocket cost exceeds the nominal ¥2,200 rounding margin.
  */
-export const hasHighDonationOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): boolean =>
-  getFurusatoDonationOutOfPocketCost(furusatoNozei) > OUT_OF_POCKET_WARNING_THRESHOLD;
+export const isHighOutOfPocketCost = (cost: number): boolean =>
+  cost > OUT_OF_POCKET_WARNING_THRESHOLD;
 
-export const hasHighOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): boolean =>
-  getFurusatoOutOfPocketCost(furusatoNozei) > OUT_OF_POCKET_WARNING_THRESHOLD;
-
-export interface FurusatoEconomicBenefitEstimate {
+export interface FurusatoTemporaryIncomeEstimate {
   /** Estimated procurement value of return gifts (26.5% of donation amount). */
   estimatedGiftsValue: number;
   /** Estimated shipping/delivery cost of return gifts (5.7% of donation amount). */
   estimatedShippingCost: number;
   /** Combined estimated economic benefit (gifts + shipping = 32.2%). */
   estimatedEconomicBenefit: number;
-}
-
-export interface FurusatoTemporaryIncomeEstimate extends FurusatoEconomicBenefitEstimate {
   /** Statutory annual special deduction for temporary income (¥500,000). */
   specialDeduction: number;
   /** Unused portion of the ¥500,000 special deduction when total temporary income is at or below ¥500,000. */
@@ -64,74 +52,29 @@ export interface FurusatoTemporaryIncomeEstimate extends FurusatoEconomicBenefit
   netTemporaryIncome: number;
   /** Incremental amount included in aggregate taxable income: floor((prior + gifts) net / 2) - floor(prior net / 2). */
   taxableTemporaryIncome: number;
-  /** Whether the engine evaluated Furusato Nozei return gifts as creating taxable temporary income. */
-  isTaxable: boolean;
-  /** Engine-computed incremental national income tax + reconstruction surtax (0 when not taxable). */
-  additionalNationalIncomeTax: number;
-  /** Engine-computed incremental residence tax (0 when not taxable). */
-  additionalResidenceTax: number;
-  /** Engine-computed incremental social insurance premiums (0 when not taxable or capped). */
-  additionalSocialInsurance: number;
-  /** Total engine-computed net cost change (`additionalNationalIncomeTax + additionalResidenceTax + additionalSocialInsurance`). */
-  additionalTotalCost: number;
 }
 
 /**
- * Estimates the economic benefit (return gifts + shipping) for a Furusato Nozei donation amount,
- * using FY2025 MIC survey averages (26.5% goods procurement + 5.7% shipping).
- */
-export const estimateFurusatoEconomicBenefit = (
-  donationAmount: number,
-): FurusatoEconomicBenefitEstimate => {
-  if (donationAmount <= 0 || !Number.isFinite(donationAmount)) {
-    return {
-      estimatedGiftsValue: 0,
-      estimatedShippingCost: 0,
-      estimatedEconomicBenefit: 0,
-    };
-  }
-
-  const estimatedGiftsValue = Math.round(
-    donationAmount * FURUSATO_AVERAGE_GIFT_COST_RATE.toDecimal(),
-  );
-  const estimatedShippingCost = Math.round(
-    donationAmount * FURUSATO_AVERAGE_SHIPPING_COST_RATE.toDecimal(),
-  );
-
-  return {
-    estimatedGiftsValue,
-    estimatedShippingCost,
-    // Sum the rounded components so displayed breakdown rows always reconcile exactly.
-    estimatedEconomicBenefit: estimatedGiftsValue + estimatedShippingCost,
-  };
-};
-
-/**
- * Returns true when the tax engine evaluated Furusato Nozei return gifts as creating taxable
- * temporary income (i.e. {@link FurusatoNozeiDetails.temporaryIncomeEffect} is populated).
- */
-export const hasTaxableFurusatoTemporaryIncome = (furusatoNozei: FurusatoNozeiDetails): boolean =>
-  furusatoNozei.temporaryIncomeEffect !== undefined;
-
-/**
- * Returns true when Furusato Nozei return gifts create a non-zero net cost change
- * (income tax, residence tax, and/or social insurance).
- */
-export const hasFurusatoTemporaryIncomeCost = (furusatoNozei: FurusatoNozeiDetails): boolean =>
-  (furusatoNozei.temporaryIncomeEffect?.total ?? 0) !== 0;
-
-/**
- * Summarizes the temporary income (一時所得) estimate and reads the engine-computed incremental
- * effect from {@link FurusatoNozeiDetails.temporaryIncomeEffect}.
+ * Estimates the temporary income (一時所得) from Furusato Nozei return gifts for a given
+ * donation amount, using FY2025 MIC survey averages (26.5% goods procurement + 5.7% shipping)
+ * and the shared ¥500,000 annual special deduction.
  */
 export const estimateFurusatoTemporaryIncome = (
-  furusatoNozei: FurusatoNozeiDetails,
+  donationAmount: number,
   existingTemporaryIncome: number = 0,
 ): FurusatoTemporaryIncomeEstimate => {
-  const prior = Math.max(0, existingTemporaryIncome);
-  const benefit = estimateFurusatoEconomicBenefit(furusatoNozei.limit);
+  const prior = Math.max(0, Number.isFinite(existingTemporaryIncome) ? existingTemporaryIncome : 0);
   const specialDeduction = TEMPORARY_INCOME_SPECIAL_DEDUCTION;
-  const totalBenefit = prior + benefit.estimatedEconomicBenefit;
+  const isPositiveDonation = donationAmount > 0 && Number.isFinite(donationAmount);
+  const estimatedGiftsValue = isPositiveDonation
+    ? Math.round(donationAmount * FURUSATO_AVERAGE_GIFT_COST_RATE.toDecimal())
+    : 0;
+  const estimatedShippingCost = isPositiveDonation
+    ? Math.round(donationAmount * FURUSATO_AVERAGE_SHIPPING_COST_RATE.toDecimal())
+    : 0;
+  // Sum the rounded components so displayed breakdown rows always reconcile exactly.
+  const estimatedEconomicBenefit = estimatedGiftsValue + estimatedShippingCost;
+  const totalBenefit = prior + estimatedEconomicBenefit;
   const remainingDeductionAllowance = Math.max(0, specialDeduction - totalBenefit);
   const netBeforeGifts = Math.max(0, prior - specialDeduction);
   const netWithGifts = Math.max(0, totalBenefit - specialDeduction);
@@ -139,20 +82,15 @@ export const estimateFurusatoTemporaryIncome = (
   const taxableTemporaryIncome =
     Math.floor(netWithGifts / TEMPORARY_INCOME_INCLUSION_DIVISOR) -
     Math.floor(netBeforeGifts / TEMPORARY_INCOME_INCLUSION_DIVISOR);
-  const isTaxable = hasTaxableFurusatoTemporaryIncome(furusatoNozei);
-  const effect = furusatoNozei.temporaryIncomeEffect;
 
   return {
-    ...benefit,
+    estimatedGiftsValue,
+    estimatedShippingCost,
+    estimatedEconomicBenefit,
     specialDeduction,
     remainingDeductionAllowance,
     netTemporaryIncome,
     taxableTemporaryIncome,
-    isTaxable,
-    additionalNationalIncomeTax: effect?.nationalIncomeTax ?? 0,
-    additionalResidenceTax: effect?.residenceTax ?? 0,
-    additionalSocialInsurance: effect?.socialInsurance ?? 0,
-    additionalTotalCost: effect?.total ?? 0,
   };
 };
 
@@ -178,7 +116,7 @@ export const getOneStopIneligibilityReasons = (
 ): OneStopIneligibilityReason[] => {
   const reasons: OneStopIneligibilityReason[] = [];
 
-  if (hasTaxableFurusatoTemporaryIncome(results.furusatoNozei)) {
+  if (results.furusatoNozei.temporaryIncomeEffect !== undefined) {
     reasons.push('taxableTemporaryIncome');
   }
   if (results.grossEmploymentIncome > MANDATORY_RETURN_SALARY_THRESHOLD) {

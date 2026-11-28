@@ -19,11 +19,9 @@ import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import {
   estimateFurusatoTemporaryIncome,
-  getFurusatoDonationOutOfPocketCost,
   getFurusatoOutOfPocketCost,
   getOneStopIneligibilityReasons,
-  hasHighDonationOutOfPocketCost,
-  hasHighOutOfPocketCost,
+  isHighOutOfPocketCost,
   type OneStopIneligibilityReason,
 } from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
@@ -66,7 +64,7 @@ const formatReduction = (amount: number): string => formatJPY(amount > 0 ? -amou
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const tempIncome = estimateFurusatoTemporaryIncome(results.furusatoNozei);
+  const tempIncome = estimateFurusatoTemporaryIncome(results.furusatoNozei.limit);
   const [showResidenceTaxDetails, setShowResidenceTaxDetails] = useState(false);
   const [showTemporaryIncomeDetails, setShowTemporaryIncomeDetails] = useState(false);
 
@@ -87,20 +85,23 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
 
   const giftsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
   const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
-  const donationOutOfPocketCost = getFurusatoDonationOutOfPocketCost(results.furusatoNozei);
+  const effect = results.furusatoNozei.temporaryIncomeEffect;
+  const tempIncomeNationalTax = effect?.nationalIncomeTax ?? 0;
+  const tempIncomeResidenceTax = effect?.residenceTax ?? 0;
+  const tempIncomeSocialInsurance = effect?.socialInsurance ?? 0;
+  const tempIncomeTotalCost = effect?.total ?? 0;
   const totalOutOfPocketCost = getFurusatoOutOfPocketCost(results.furusatoNozei);
-  const hasTemporaryIncomeCost = tempIncome.additionalTotalCost !== 0;
-  const hasPositiveTemporaryIncomeCost = tempIncome.additionalTotalCost > 0;
+  const donationOutOfPocketCost = totalOutOfPocketCost - tempIncomeTotalCost;
+  const hasTemporaryIncomeCost = tempIncomeTotalCost !== 0;
+  const hasPositiveTemporaryIncomeCost = tempIncomeTotalCost > 0;
   const hasEffectBreakdown =
-    tempIncome.additionalNationalIncomeTax !== 0 ||
-    tempIncome.additionalResidenceTax !== 0 ||
-    tempIncome.additionalSocialInsurance !== 0;
+    tempIncomeNationalTax !== 0 || tempIncomeResidenceTax !== 0 || tempIncomeSocialInsurance !== 0;
   const tempIncomeCostLabel =
-    tempIncome.additionalSocialInsurance !== 0
+    tempIncomeSocialInsurance !== 0
       ? 'additional tax and social insurance'
       : 'income and residence tax';
-  const hasHighDonationCost = hasHighDonationOutOfPocketCost(results.furusatoNozei);
-  const hasHighTotalOutOfPocket = hasHighOutOfPocketCost(results.furusatoNozei);
+  const hasHighDonationCost = isHighOutOfPocketCost(donationOutOfPocketCost);
+  const hasHighTotalOutOfPocket = isHighOutOfPocketCost(totalOutOfPocketCost);
   const netEstimatedBenefit = tempIncome.estimatedGiftsValue - totalOutOfPocketCost;
   const netBenefitTone = netEstimatedBenefit < 0 ? ('warning' as const) : ('success' as const);
 
@@ -331,14 +332,19 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               controlsId: TEMPORARY_INCOME_DETAILS_ID,
             },
           })}
-          labelSuffix={<FurusatoTemporaryIncomeTooltip estimate={tempIncome} />}
+          labelSuffix={
+            <FurusatoTemporaryIncomeTooltip
+              estimate={tempIncome}
+              hasCost={hasPositiveTemporaryIncomeCost}
+            />
+          }
           value={
             hasPositiveTemporaryIncomeCost ? (
               <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
-                ≈ {formatJPY(tempIncome.additionalTotalCost)}
+                ≈ {formatJPY(tempIncomeTotalCost)}
               </Box>
             ) : hasTemporaryIncomeCost ? (
-              `≈ ${formatJPY(tempIncome.additionalTotalCost)}`
+              `≈ ${formatJPY(tempIncomeTotalCost)}`
             ) : (
               formatJPY(0)
             )
@@ -351,18 +357,18 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
               <ResultRow
                 label="Income tax & surtax"
-                value={formatJPY(tempIncome.additionalNationalIncomeTax)}
+                value={formatJPY(tempIncomeNationalTax)}
                 type="detail"
               />
               <ResultRow
                 label="Residence tax"
-                value={formatJPY(tempIncome.additionalResidenceTax)}
+                value={formatJPY(tempIncomeResidenceTax)}
                 type="detail"
               />
-              {tempIncome.additionalSocialInsurance !== 0 && (
+              {tempIncomeSocialInsurance !== 0 && (
                 <ResultRow
                   label="Social insurance"
-                  value={formatJPY(tempIncome.additionalSocialInsurance)}
+                  value={formatJPY(tempIncomeSocialInsurance)}
                   type="detail"
                 />
               )}
@@ -388,8 +394,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                           The estimated out-of-pocket cost is higher than the expected ≈2,000 yen
                           because the return gifts are estimated to create taxable temporary income
                           (一時所得) exceeding the ¥500,000 annual special deduction, adding ≈{' '}
-                          {formatJPY(tempIncome.additionalTotalCost)} in {tempIncomeCostLabel} (on
-                          top of the {formatJPY(donationOutOfPocketCost)} base donation cost).
+                          {formatJPY(tempIncomeTotalCost)} in {tempIncomeCostLabel} (on top of the{' '}
+                          {formatJPY(donationOutOfPocketCost)} base donation cost).
                         </Typography>
                         <Typography variant="body2" sx={{ mt: 1 }}>
                           Filing a tax return is required when taxable temporary income arises, so
@@ -479,10 +485,10 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                         {hasPositiveTemporaryIncomeCost && (
                           <Typography variant="body2" sx={{ mt: 1 }}>
                             In addition, estimated taxable temporary income from the return gifts
-                            adds ≈ {formatJPY(tempIncome.additionalTotalCost)} in{' '}
-                            {tempIncomeCostLabel} ({formatJPY(donationOutOfPocketCost)} base
-                            donation cost + ≈ {formatJPY(tempIncome.additionalTotalCost)} gift
-                            temporary income effect = ≈ {formatJPY(totalOutOfPocketCost)} total).
+                            adds ≈ {formatJPY(tempIncomeTotalCost)} in {tempIncomeCostLabel} (
+                            {formatJPY(donationOutOfPocketCost)} base donation cost + ≈{' '}
+                            {formatJPY(tempIncomeTotalCost)} gift temporary income effect = ≈{' '}
+                            {formatJPY(totalOutOfPocketCost)} total).
                           </Typography>
                         )}
                       </>

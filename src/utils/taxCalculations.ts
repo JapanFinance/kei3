@@ -10,7 +10,6 @@ import {
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import type { Rate } from '../data/rate';
-import { TEMPORARY_INCOME_SPECIAL_DEDUCTION } from '../data/temporaryIncome';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
@@ -55,7 +54,7 @@ import {
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
 import { calculateForeignTaxCredit } from './foreignTaxCredit';
-import { estimateFurusatoEconomicBenefit } from './furusatoNozei';
+import { estimateFurusatoTemporaryIncome } from './furusatoNozei';
 import {
   calculateHealthInsuranceBreakdown,
   calculateHouseholdNHIBreakdown,
@@ -1565,17 +1564,16 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       );
 
       const existingTemporaryIncome = Math.max(0, inputs.temporaryIncome || 0);
-      const benefit = estimateFurusatoEconomicBenefit(furusatoLimit.finalLimit);
+      const giftTempIncome = estimateFurusatoTemporaryIncome(
+        furusatoLimit.finalLimit,
+        existingTemporaryIncome,
+      );
       let temporaryIncomeEffect: FurusatoNozeiDetails['temporaryIncomeEffect'];
-      if (
-        benefit.estimatedEconomicBenefit > 0 &&
-        existingTemporaryIncome + benefit.estimatedEconomicBenefit >
-          TEMPORARY_INCOME_SPECIAL_DEDUCTION
-      ) {
+      if (giftTempIncome.netTemporaryIncome > 0) {
         const withFurusatoAndTempIncome = calculateTaxes({
           ...inputs,
           furusatoDonation: furusatoLimit.finalLimit,
-          temporaryIncome: existingTemporaryIncome + benefit.estimatedEconomicBenefit,
+          temporaryIncome: existingTemporaryIncome + giftTempIncome.estimatedEconomicBenefit,
         });
         const nationalIncomeTaxDelta =
           withFurusatoAndTempIncome.nationalIncomeTax - withFurusato.nationalIncomeTax;
