@@ -44,7 +44,7 @@ const baseInputs = {
 };
 
 describe('estimateFurusatoEconomicBenefit', () => {
-  it('returns zeros when donation limit is zero or negative', () => {
+  it('returns zeros when donation amount is zero or negative', () => {
     expect(estimateFurusatoEconomicBenefit(0)).toEqual({
       estimatedGiftsValue: 0,
       estimatedShippingCost: 0,

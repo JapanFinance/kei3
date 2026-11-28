@@ -47,9 +47,9 @@ export const hasHighOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails): boo
   getFurusatoOutOfPocketCost(furusatoNozei) > OUT_OF_POCKET_WARNING_THRESHOLD;
 
 export interface FurusatoEconomicBenefitEstimate {
-  /** Estimated procurement value of return gifts (26.5% of donation limit). */
+  /** Estimated procurement value of return gifts (26.5% of donation amount). */
   estimatedGiftsValue: number;
-  /** Estimated shipping/delivery cost of return gifts (5.7% of donation limit). */
+  /** Estimated shipping/delivery cost of return gifts (5.7% of donation amount). */
   estimatedShippingCost: number;
   /** Combined estimated economic benefit (gifts + shipping = 32.2%). */
   estimatedEconomicBenefit: number;
@@ -77,11 +77,13 @@ export interface FurusatoTemporaryIncomeEstimate extends FurusatoEconomicBenefit
 }
 
 /**
- * Estimates the economic benefit (return gifts + shipping) from donating at the given Furusato
- * Nozei limit, using FY2025 MIC survey averages (26.5% goods procurement + 5.7% shipping).
+ * Estimates the economic benefit (return gifts + shipping) for a Furusato Nozei donation amount,
+ * using FY2025 MIC survey averages (26.5% goods procurement + 5.7% shipping).
  */
-export const estimateFurusatoEconomicBenefit = (limit: number): FurusatoEconomicBenefitEstimate => {
-  if (limit <= 0 || !Number.isFinite(limit)) {
+export const estimateFurusatoEconomicBenefit = (
+  donationAmount: number,
+): FurusatoEconomicBenefitEstimate => {
+  if (donationAmount <= 0 || !Number.isFinite(donationAmount)) {
     return {
       estimatedGiftsValue: 0,
       estimatedShippingCost: 0,
@@ -89,8 +91,12 @@ export const estimateFurusatoEconomicBenefit = (limit: number): FurusatoEconomic
     };
   }
 
-  const estimatedGiftsValue = Math.round(limit * FURUSATO_AVERAGE_GIFT_COST_RATE.toDecimal());
-  const estimatedShippingCost = Math.round(limit * FURUSATO_AVERAGE_SHIPPING_COST_RATE.toDecimal());
+  const estimatedGiftsValue = Math.round(
+    donationAmount * FURUSATO_AVERAGE_GIFT_COST_RATE.toDecimal(),
+  );
+  const estimatedShippingCost = Math.round(
+    donationAmount * FURUSATO_AVERAGE_SHIPPING_COST_RATE.toDecimal(),
+  );
 
   return {
     estimatedGiftsValue,
