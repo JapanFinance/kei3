@@ -151,7 +151,6 @@ const results: TakeHomeResults = makeTakeHomeResults({
     residenceTaxDonationBasicDeduction: 6_300,
     residenceTaxSpecialDeduction: 50_269,
     residenceTaxReduction: 56_600,
-    outOfPocketCost: 5_200,
   }),
   investmentIncome: {
     reported: { separate },
@@ -948,7 +947,6 @@ describe('FurusatoNozeiTab with the foreign tax credit', () => {
       furusatoNozei: {
         ...withForeignTax.furusatoNozei,
         incomeTaxReduction: 0,
-        outOfPocketCost: 15_000,
       },
     };
     render(<FurusatoNozeiTab results={wipedOutResults} />);

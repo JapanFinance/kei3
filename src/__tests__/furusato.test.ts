@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { getFurusatoOutOfPocketCost } from '../utils/furusatoNozei';
 import { calculateFurusatoResidenceCredit } from '../utils/residenceTax';
 import { calculateTaxes } from '../utils/taxCalculations';
 import { makeDependent, makeSpouse } from './fixtures/dependents';
@@ -14,7 +15,7 @@ describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the default salary', () => {
     const fn = calculateFNForIncome(5_000_000);
     expect(fn.limit).toBe(58_000);
-    expect(fn.outOfPocketCost).toBe(2_000);
+    expect(getFurusatoOutOfPocketCost(fn)).toBe(2_000);
     expect(fn.incomeTaxReduction).toBe(2_900);
     expect(fn.residenceTaxReduction).toBe(53_100);
   });
@@ -22,7 +23,7 @@ describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the salary with lower out-of-pocket cost', () => {
     const fn = calculateFNForIncome(6_000_000);
     expect(fn.limit).toBe(77_000);
-    expect(fn.outOfPocketCost).toBe(2_100);
+    expect(getFurusatoOutOfPocketCost(fn)).toBe(2_100);
     expect(fn.incomeTaxReduction).toBe(7_600);
     expect(fn.residenceTaxReduction).toBe(67_300);
   });
@@ -30,14 +31,14 @@ describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the salary with slightly higher out-of-pocket cost', () => {
     const fn = calculateFNForIncome(8_800_000);
     expect(fn.limit).toBe(151_000);
-    expect(fn.outOfPocketCost).toBe(1_800);
+    expect(getFurusatoOutOfPocketCost(fn)).toBe(1_800);
     expect(fn.incomeTaxReduction).toBe(30_500);
     expect(fn.residenceTaxReduction).toBe(118_700);
   });
 
   it('high-income salary matches 23% bracket with basic deduction adjustment', () => {
     const fn = calculateFNForIncome(13_000_000);
-    expect(fn.outOfPocketCost).toBe(1_900);
+    expect(getFurusatoOutOfPocketCost(fn)).toBe(1_900);
     expect(fn.limit).toBe(277_000);
     expect(fn.incomeTaxReduction).toBe(64_600);
     expect(fn.residenceTaxReduction).toBe(210_500);
@@ -46,7 +47,7 @@ describe('calculateFurusatoNozeiLimit', () => {
   it('mid range salary matches 10% bracket with basic deduction adjustment', () => {
     const fn = calculateFNForIncome(6_500_000);
     expect(fn.limit).toBe(86_000);
-    expect(fn.outOfPocketCost).toBe(2_000);
+    expect(getFurusatoOutOfPocketCost(fn)).toBe(2_000);
     expect(fn.incomeTaxReduction).toBe(8_600);
     expect(fn.residenceTaxReduction).toBe(75_400);
   });
@@ -74,7 +75,7 @@ describe('calculateFurusatoNozeiLimit', () => {
 
     expect(fn.limit).toBeLessThan(fnWithoutDC.limit);
     expect(fn.limit).toBe(52_000);
-    expect(fn.outOfPocketCost).toBe(2_100);
+    expect(getFurusatoOutOfPocketCost(fn)).toBe(2_100);
   });
 
   describe('home loan tax credit (住宅ローン控除) interactions', () => {
@@ -256,8 +257,8 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(credit.appliedToIncomeTax).toBeGreaterThan(0); // there WAS income tax to lose
       expect(baseline.furusatoNozei.incomeTaxReduction).toBeGreaterThan(0);
       expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
-      expect(withCredit.furusatoNozei.outOfPocketCost).toBeGreaterThan(
-        baseline.furusatoNozei.outOfPocketCost,
+      expect(getFurusatoOutOfPocketCost(withCredit.furusatoNozei)).toBeGreaterThan(
+        getFurusatoOutOfPocketCost(baseline.furusatoNozei),
       );
     });
 
@@ -481,13 +482,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       // Because national income tax is ¥0, donation deduction cannot refund any national income tax
       expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
       // Out of pocket cost is higher than nominal ¥2,000
-      expect(withCredit.furusatoNozei.outOfPocketCost).toBeGreaterThan(2_200);
-      // Cash flow reconciliation: limit minus reductions equals outOfPocketCost exactly
-      expect(
-        withCredit.furusatoNozei.limit -
-          withCredit.furusatoNozei.incomeTaxReduction -
-          withCredit.furusatoNozei.residenceTaxReduction,
-      ).toBe(withCredit.furusatoNozei.outOfPocketCost);
+      expect(getFurusatoOutOfPocketCost(withCredit.furusatoNozei)).toBeGreaterThan(2_200);
     });
 
     it('simulates accurate FTC limit reduction when foreign tax credit is partial', () => {
@@ -512,12 +507,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withPartialCredit.nationalIncomeTax).toBeGreaterThan(0);
       expect(withPartialCredit.furusatoNozei.incomeTaxReduction).toBeGreaterThan(0);
       expect(withPartialCredit.furusatoNozei.residenceTaxReduction).toBeGreaterThan(0);
-      // Cash flow reconciliation: limit minus reductions equals outOfPocketCost exactly
-      expect(
-        withPartialCredit.furusatoNozei.limit -
-          withPartialCredit.furusatoNozei.incomeTaxReduction -
-          withPartialCredit.furusatoNozei.residenceTaxReduction,
-      ).toBe(withPartialCredit.furusatoNozei.outOfPocketCost);
+      expect(getFurusatoOutOfPocketCost(withPartialCredit.furusatoNozei)).toBe(2_000);
     });
   });
 

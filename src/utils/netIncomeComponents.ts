@@ -3,6 +3,10 @@
 
 import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
+import {
+  TEMPORARY_INCOME_INCLUSION_DIVISOR,
+  TEMPORARY_INCOME_SPECIAL_DEDUCTION,
+} from '../data/temporaryIncome';
 import type { AgeRange } from '../types/age';
 import type { SeparateNetIncome } from '../types/tax';
 import { NO_SEPARATE_NET_INCOME } from './investmentIncome';
@@ -122,9 +126,39 @@ export interface NetIncomeComposition {
    * of 総所得金額 (措法8条の4③一, 37条の10⑥一 as 37条の11⑥ applies it). Absent means none.
    */
   separateNetIncome?: SeparateNetIncome | undefined;
+  /**
+   * Gross temporary income (一時所得の総収入金額, net of direct expenses), before the ¥500,000
+   * special deduction (所得税法第34条第3項) and ½ inclusion (所得税法第22条第2項第2号). Absent
+   * means none.
+   */
+  grossTemporaryIncome?: number | undefined;
   /** Income year for the deduction table lookups. */
   year: number;
 }
+
+/**
+ * Combines ordinary aggregate income (経常所得等) with net temporary income (一時所得の金額,
+ * after the ¥500,000 special deduction), applying statutory loss-netting order before ½ inclusion
+ * (所法22条2項2号, 所法69条1項, 所令198条): ordinary operating losses offset temporary income
+ * before halving; temporary income itself cannot be negative.
+ */
+const combineOrdinaryAndTemporaryIncome = (
+  ordinaryAggregateIncome: number,
+  netTemporaryIncome: number,
+): number => {
+  if (netTemporaryIncome <= 0) {
+    return ordinaryAggregateIncome;
+  }
+  if (ordinaryAggregateIncome >= 0) {
+    return (
+      ordinaryAggregateIncome + Math.floor(netTemporaryIncome / TEMPORARY_INCOME_INCLUSION_DIVISOR)
+    );
+  }
+  const remainingTemporaryIncome = netTemporaryIncome + ordinaryAggregateIncome;
+  return remainingTemporaryIncome > 0
+    ? Math.floor(remainingTemporaryIncome / TEMPORARY_INCOME_INCLUSION_DIVISOR)
+    : remainingTemporaryIncome;
+};
 
 /**
  * Calculates 合計所得金額 (total net income, 所法2条1項30号): the sum of aggregate net income
@@ -153,20 +187,27 @@ export const composeNetIncomeComponents = ({
   aggregateDividendIncome = 0,
   aggregateInterestIncome = 0,
   separateNetIncome = NO_SEPARATE_NET_INCOME,
+  grossTemporaryIncome = 0,
   year,
 }: NetIncomeComposition): NetIncomeComponents => {
   const netEmploymentIncomeBeforePensionAdjustment =
     calculateNetEmploymentIncome(grossEmploymentIncome, year) - incomeAdjustmentDeduction;
   const separateNetIncomeTotal = separateNetIncome.capitalGains + separateNetIncome.dividends;
+  const netTemporaryIncome = Math.max(
+    0,
+    Math.max(0, grossTemporaryIncome) - TEMPORARY_INCOME_SPECIAL_DEDUCTION,
+  );
 
-  // Other net income taxed under 総合課税 besides employment and public pension (事業所得,
-  // 公的年金等以外の雑所得, 総合配当, 総合利子).
+  // Other net income taxed under 総合課税 besides employment, public pension, and temporary
+  // income (事業所得, 公的年金等以外の雑所得, 総合配当, 総合利子).
   const otherAggregateIncome = otherNetIncome + aggregateDividendIncome + aggregateInterestIncome;
 
   // Aggregate net income without public pension income (and before the pension income adjustment
   // deduction, which requires public pension income to apply).
-  const nonPensionAggregateNetIncome =
-    netEmploymentIncomeBeforePensionAdjustment + otherAggregateIncome;
+  const nonPensionAggregateNetIncome = combineOrdinaryAndTemporaryIncome(
+    netEmploymentIncomeBeforePensionAdjustment + otherAggregateIncome,
+    netTemporaryIncome,
+  );
 
   // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
   // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額).
@@ -189,9 +230,12 @@ export const composeNetIncomeComponents = ({
   const netEmploymentIncome =
     netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
 
-  // 総所得金額 (所法22条②一): net sum of all 総合課税 categories after 損益通算 (所法69条①).
-  // Negative when operating losses exceed positive income.
-  const aggregateNetIncome = netEmploymentIncome + netPublicPensionIncome + otherAggregateIncome;
+  // 総所得金額 (所法22条②一・二): net sum of all 総合課税 categories after 損益通算 (所法69条①)
+  // and ½ inclusion of net temporary income. Negative when operating losses exceed positive income.
+  const aggregateNetIncome = combineOrdinaryAndTemporaryIncome(
+    netEmploymentIncome + netPublicPensionIncome + otherAggregateIncome,
+    netTemporaryIncome,
+  );
 
   // 合計所得金額 (所法2条1項30号): aggregate losses cannot offset separate investment income.
   const totalNetIncome = calculateTotalNetIncome(aggregateNetIncome, separateNetIncomeTotal);

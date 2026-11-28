@@ -943,6 +943,13 @@ export interface TakeHomeInputs {
    * donation.
    */
   furusatoDonation?: number | undefined;
+  /**
+   * Gross temporary income (一時所得の総収入金額, net of any direct expenses) in yen, before the
+   * ¥500,000 annual special deduction (特別控除, 所得税法第34条第3項) and ½ inclusion in 総所得金額
+   * (所得税法第22条第2項第2号). Currently engine-only (not exposed in the form UI) and used to
+   * compute the exact tax impact of Furusato Nozei return gifts. Absent or ≤ 0 means none.
+   */
+  temporaryIncome?: number | undefined;
   /** How household NHI premiums are attributed to the taxpayer */
   nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
   /** Region used for household NHI when taxpayer is on non-NHI provider */
@@ -1330,13 +1337,30 @@ export type NonTaxableResidenceTaxStatus =
   | 'singleParent'
   | 'incomeThreshold';
 
+/**
+ * Incremental income tax, residence tax, and (when below social insurance caps) social insurance
+ * premium changes computed by the tax engine when total temporary income including the estimated
+ * economic benefit of Furusato Nozei return gifts (26.5% goods + 5.7% shipping) exceeds the
+ * ¥500,000 temporary income special deduction.
+ */
+export interface FurusatoTemporaryIncomeEffect {
+  /** Incremental national income tax (incl. reconstruction surtax, credits, and minimum tax). May be negative in deduction-cliff credit or social insurance interactions. */
+  nationalIncomeTax: number;
+  /** Incremental residence tax (municipal + prefectural, after ¥100 flooring and credits). May be negative in deduction-cliff credit or social insurance interactions. */
+  residenceTax: number;
+  /** Incremental social insurance premiums (NHI, 75+ Latter-Stage Elderly, 65+ LTC Category 1, or National Pension exemption loss). Omitted when 0. */
+  socialInsurance?: number | undefined;
+  /** Total net cost change (`nationalIncomeTax + residenceTax + (socialInsurance ?? 0)`). */
+  total: number;
+}
+
 export interface FurusatoNozeiDetails {
   limit: number;
   incomeTaxReduction: number;
   residenceTaxDonationBasicDeduction: number;
   residenceTaxSpecialDeduction: number;
-  outOfPocketCost: number;
   residenceTaxReduction: number;
+  temporaryIncomeEffect?: FurusatoTemporaryIncomeEffect | undefined;
 }
 
 export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {
@@ -1344,7 +1368,6 @@ export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {
   incomeTaxReduction: 0,
   residenceTaxDonationBasicDeduction: 0,
   residenceTaxSpecialDeduction: 0,
-  outOfPocketCost: 0,
   residenceTaxReduction: 0,
 };
 

@@ -54,6 +54,7 @@ import {
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
 import { calculateForeignTaxCredit } from './foreignTaxCredit';
+import { estimateFurusatoTemporaryIncome } from './furusatoNozei';
 import {
   calculateHealthInsuranceBreakdown,
   calculateHouseholdNHIBreakdown,
@@ -928,6 +929,7 @@ const composeTaxpayerNetIncomeComponents = (
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
+  temporaryIncome: number = 0,
 ): NetIncomeComponents => {
   const {
     grossEmploymentIncome,
@@ -950,6 +952,7 @@ const composeTaxpayerNetIncomeComponents = (
     aggregateDividendIncome: breakdown.aggregateDividends,
     aggregateInterestIncome: breakdown.aggregateInterest,
     separateNetIncome: breakdown.separateBase.netIncome,
+    grossTemporaryIncome: Math.max(0, temporaryIncome || 0),
     year,
   });
 };
@@ -1062,6 +1065,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     inputs.ageRange,
     inputs.dependents,
     inputs.personalCircumstances,
+    inputs.temporaryIncome,
   );
 
   let healthInsurance = 0;
@@ -1558,7 +1562,34 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         0,
         residenceTax.totalResidenceTax - withFurusato.residenceTax.totalResidenceTax,
       );
-      const outOfPocketCost = furusatoLimit.finalLimit - incomeTaxReduction - residenceTaxReduction;
+
+      const existingTemporaryIncome = Math.max(0, inputs.temporaryIncome || 0);
+      const giftTempIncome = estimateFurusatoTemporaryIncome(
+        furusatoLimit.finalLimit,
+        existingTemporaryIncome,
+      );
+      let temporaryIncomeEffect: FurusatoNozeiDetails['temporaryIncomeEffect'];
+      if (giftTempIncome.netTemporaryIncome > 0) {
+        const withFurusatoAndTempIncome = calculateTaxes({
+          ...inputs,
+          furusatoDonation: furusatoLimit.finalLimit,
+          temporaryIncome: existingTemporaryIncome + giftTempIncome.estimatedEconomicBenefit,
+        });
+        const nationalIncomeTaxDelta =
+          withFurusatoAndTempIncome.nationalIncomeTax - withFurusato.nationalIncomeTax;
+        const residenceTaxDelta =
+          withFurusatoAndTempIncome.residenceTax.totalResidenceTax -
+          withFurusato.residenceTax.totalResidenceTax;
+        const socialInsuranceDelta =
+          totalSocialInsurancePaid(withFurusatoAndTempIncome) -
+          totalSocialInsurancePaid(withFurusato);
+        temporaryIncomeEffect = {
+          nationalIncomeTax: nationalIncomeTaxDelta,
+          residenceTax: residenceTaxDelta,
+          ...(socialInsuranceDelta !== 0 && { socialInsurance: socialInsuranceDelta }),
+          total: nationalIncomeTaxDelta + residenceTaxDelta + socialInsuranceDelta,
+        };
+      }
 
       furusatoNozei = {
         limit: furusatoLimit.finalLimit,
@@ -1566,7 +1597,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxDonationBasicDeduction: furusatoLimit.residenceTaxDonationBasicDeduction,
         residenceTaxSpecialDeduction: furusatoLimit.residenceTaxSpecialDeduction,
         residenceTaxReduction,
-        outOfPocketCost,
+        ...(temporaryIncomeEffect && { temporaryIncomeEffect }),
       };
     }
   }

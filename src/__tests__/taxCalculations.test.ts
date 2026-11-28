@@ -20,6 +20,7 @@ import {
   type TakeHomeInputs,
 } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
+import { getFurusatoOutOfPocketCost } from '../utils/furusatoNozei';
 import { calculateTotalNetIncome } from '../utils/netIncomeComponents';
 import {
   calculateTaxes,
@@ -5485,8 +5486,8 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         residenceTaxDonationBasicDeduction: 6_700,
         residenceTaxSpecialDeduction: 56_880,
         residenceTaxReduction: 63_300,
-        outOfPocketCost: 3_100,
       });
+      expect(getFurusatoOutOfPocketCost(result.furusatoNozei)).toBe(3_100);
       expect(
         calculateTaxes(salaryInputs([{ ...foreignDividend(true), foreignTax: 0 }])).furusatoNozei
           .residenceTaxReduction,
@@ -6493,7 +6494,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           results.pensionPayments,
           results.totalNetIncome,
           results.furusatoNozei.limit,
-          results.furusatoNozei.outOfPocketCost,
+          getFurusatoOutOfPocketCost(results.furusatoNozei),
         ]) {
           expect(Number.isSafeInteger(val)).toBe(true);
         }
