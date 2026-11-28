@@ -1596,7 +1596,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       }
 
       const ineligibleReasons = evaluateOneStopIneligibilityReasons({
-        hasTaxableTemporaryIncome: temporaryIncomeEffect !== undefined,
+        hasTaxableTemporaryIncome: giftTempIncome.taxableTemporaryIncome > 0,
         hasEmploymentIncome,
         grossEmploymentIncome,
         netEmploymentIncome,
@@ -1604,14 +1604,16 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         netPublicPensionIncome,
         netBusinessAndMiscIncome,
         businessBlueFilerDeduction,
-        hasRealEstateIncome: inputs.incomeStreams.some(s => s.type === 'realEstate'),
+        hasRealEstateIncome: inputs.incomeStreams.some(
+          s => s.type === 'realEstate' && (s.amount !== 0 || s.foreignTax > 0),
+        ),
         incomeStreams: inputs.incomeStreams,
         hasReportedInvestmentIncome:
           hasSeparateReportedInvestment || aggregateDividends > 0 || aggregateInterest > 0,
         additionalDeductionItems: additionalDeductions.items,
         dcPlanContributions: idecoDeduction,
         familyNationalPension: familyNationalPension ?? 0,
-        homeLoanCreditAmount: inputs.homeLoanTaxCredit?.creditAmount ?? 0,
+        homeLoanCreditAmount: homeLoanTaxCreditResult?.availableCredit ?? 0,
         homeLoanMoveInYear: inputs.homeLoanTaxCredit?.moveInYear,
         incomeYear,
         hasForeignTaxCredit: foreignTax > 0,

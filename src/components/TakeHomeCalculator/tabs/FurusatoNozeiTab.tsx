@@ -278,7 +278,7 @@ const ComparisonDetailRow: React.FC<ComparisonDetailRowProps> = ({
           textAlign: 'left',
           pl: 3.5,
           fontSize: '0.8rem',
-          color: 'text.disabled',
+          color: 'text.secondary',
           fontWeight: isSubtotal ? 500 : 400,
         }}
       >
@@ -393,6 +393,19 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         a tax return is required ({oneStopReasonsText}).
       </Typography>
     ) : null;
+  const oneStopFallbackNotice =
+    oneStopIneligibleNotice ??
+    (hasHighOneStopCost ? (
+      <Typography variant="body2" sx={{ mt: 1 }}>
+        Even under the One-Stop system (ワンストップ特例制度), the Home Loan Tax Credit spillover
+        leaves insufficient remaining residence tax (所得割) to absorb the full Furusato Nozei
+        credit.
+      </Typography>
+    ) : (
+      <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+        This issue is avoided by using the One-Stop system (ワンストップ特例制度).
+      </Typography>
+    ));
 
   const formattedOutOfPocketTotal = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(totalOutOfPocketCost)}`;
   const formattedOutOfPocketDeduction = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(-totalOutOfPocketCost)}`;
@@ -529,18 +542,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   Loan Tax Credit already reduces Japanese national income tax to ¥0, and any
                   spillover into residence tax has reached its statutory cap.
                 </Typography>
-                {oneStopIneligibleNotice ??
-                  (hasHighOneStopCost ? (
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Even under the One-Stop system (ワンストップ特例制度), the Home Loan Tax
-                      Credit spillover leaves insufficient remaining residence tax (所得割) to
-                      absorb the full Furusato Nozei credit.
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                      This issue is avoided by using the One-Stop system (ワンストップ特例制度).
-                    </Typography>
-                  ))}
+                {oneStopFallbackNotice}
               </>
             ) : results.highIncomeMinimumTax ? (
               <>
@@ -563,11 +565,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   filing a tax return if taxable income changes income tax brackets after applying
                   the Furusato Nozei donation deduction.
                 </Typography>
-                {oneStopIneligibleNotice ?? (
-                  <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                    This issue is avoided by using the One-Stop system (ワンストップ特例制度).
-                  </Typography>
-                )}
+                {oneStopFallbackNotice}
               </>
             )}
             {hasPositiveTemporaryIncomeCost && (

@@ -7,6 +7,7 @@ import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
+  estimateFurusatoTemporaryIncome,
   getFurusatoOneStopOutOfPocketCost,
   getFurusatoOutOfPocketCost,
 } from '../utils/furusatoNozei';
@@ -1011,6 +1012,77 @@ describe('calculateFurusatoNozeiLimit', () => {
       if (minTax.furusatoNozei.oneStop && !minTax.furusatoNozei.oneStop.eligible) {
         expect(minTax.furusatoNozei.oneStop.ineligibleReasons).toContain('highIncomeMinimumTax');
       }
+    });
+
+    it('ignores rejected home loan credits, zero-amount real estate streams, and 1-yen temporary income rounding to ¥0', () => {
+      const pensionWithUnsupportedHomeLoan = calculateTaxes({
+        ...baseSalaryInputs(0),
+        incomeStreams: [
+          {
+            id: 'pp1',
+            type: 'publicPension',
+            amount: 3_500_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age65to69',
+        homeLoanTaxCredit: { moveInYear: 2010, creditAmount: 200_000 },
+      });
+      expect(pensionWithUnsupportedHomeLoan.furusatoNozei.oneStop?.eligible).toBe(true);
+
+      const overCohortLimitYear1HomeLoan = calculateTaxes({
+        ...baseSalaryInputs(25_000_000),
+        homeLoanTaxCredit: { moveInYear: 2026, creditAmount: 300_000 },
+      });
+      expect(overCohortLimitYear1HomeLoan.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['employmentIncomeOverThreshold'],
+      });
+
+      const zeroRealEstate = calculateTaxes({
+        ...baseSalaryInputs(5_000_000),
+        incomeStreams: [
+          ...baseSalaryInputs(5_000_000).incomeStreams,
+          { id: 're-zero', type: 'realEstate', amount: 0, location: 'domestic', foreignTax: 0 },
+        ],
+      });
+      expect(zeroRealEstate.furusatoNozei.oneStop?.eligible).toBe(true);
+
+      const offsettingRealEstate = calculateTaxes({
+        ...baseSalaryInputs(5_000_000),
+        incomeStreams: [
+          ...baseSalaryInputs(5_000_000).incomeStreams,
+          {
+            id: 're-pos',
+            type: 'realEstate',
+            amount: 500_000,
+            location: 'domestic',
+            foreignTax: 0,
+          },
+          {
+            id: 're-neg',
+            type: 'realEstate',
+            amount: -500_000,
+            location: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+      });
+      expect(offsettingRealEstate.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['realEstateIncome'],
+      });
+
+      const baseline = calculateTaxes(baseSalaryInputs(5_000_000));
+      const giftBenefit = estimateFurusatoTemporaryIncome(
+        baseline.furusatoNozei.limit,
+      ).estimatedEconomicBenefit;
+      const oneYenNetTempIncome = calculateTaxes({
+        ...baseSalaryInputs(5_000_000),
+        temporaryIncome: 500_001 - giftBenefit,
+      });
+      expect(oneYenNetTempIncome.furusatoNozei.oneStop?.eligible).toBe(true);
     });
   });
 });

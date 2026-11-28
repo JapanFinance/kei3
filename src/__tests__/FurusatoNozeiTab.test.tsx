@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { createTheme } from '@mui/material/styles';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -792,5 +793,52 @@ describe('FurusatoNozeiTab One-Stop vs Tax Return Comparison', () => {
         /Even under the One-Stop system.*leaves insufficient remaining residence tax/s,
       ),
     ).toBeInTheDocument();
+  });
+
+  it('does not claim One-Stop avoids high cost in fallback tooltip branch when One-Stop also has high cost', () => {
+    const results = makeTakeHomeResults({
+      homeLoanTaxCredit: mockHomeLoanCredit,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 50_000,
+        incomeTaxReduction: 2_500,
+        residenceTaxReduction: 40_000,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 5_000,
+          municipalTaxCredit: 27_000,
+          prefecturalTaxCredit: 18_000,
+          residenceTaxReduction: 40_000,
+        },
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    const taxReturnTooltip = screen.getByLabelText('High out-of-pocket cost warning');
+    expect(within(taxReturnTooltip).getByText(/changes income tax brackets/)).toBeInTheDocument();
+    expect(
+      within(taxReturnTooltip).getByText(
+        /Even under the One-Stop system.*leaves insufficient remaining residence tax/s,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(taxReturnTooltip).queryByText(/This issue is avoided by using the One-Stop system/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders expanded detail row labels with text.secondary contrast instead of text.disabled', () => {
+    render(<FurusatoNozeiTab results={makeEligibleBracketShiftResults()} />);
+
+    const residenceToggle = screen.getByRole('button', { name: /Residence Tax Reduction/ });
+    fireEvent.click(residenceToggle);
+
+    const details = document.getElementById(residenceToggle.getAttribute('aria-controls')!)!;
+    const municipalLabel = within(details).getByRole('rowheader', { name: 'Municipal tax credit' });
+    const prefecturalLabel = within(details).getByRole('rowheader', {
+      name: 'Prefectural tax credit',
+    });
+    const defaultTheme = createTheme();
+    expect(getComputedStyle(municipalLabel).color).toBe(defaultTheme.palette.text.secondary);
+    expect(getComputedStyle(prefecturalLabel).color).toBe(defaultTheme.palette.text.secondary);
   });
 });
