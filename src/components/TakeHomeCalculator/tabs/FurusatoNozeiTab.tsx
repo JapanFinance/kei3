@@ -28,7 +28,7 @@ import {
 } from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks, { type Source } from '../../ui/SourceLinks';
-import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import {
   FurusatoTemporaryIncomeTooltip,
@@ -89,7 +89,16 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
   const donationOutOfPocketCost = getFurusatoDonationOutOfPocketCost(results.furusatoNozei);
   const totalOutOfPocketCost = getFurusatoOutOfPocketCost(results.furusatoNozei);
-  const hasTemporaryIncomeTax = tempIncome.additionalTotalTax > 0;
+  const hasTemporaryIncomeCost = tempIncome.additionalTotalCost !== 0;
+  const hasPositiveTemporaryIncomeCost = tempIncome.additionalTotalCost > 0;
+  const hasEffectBreakdown =
+    tempIncome.additionalNationalIncomeTax !== 0 ||
+    tempIncome.additionalResidenceTax !== 0 ||
+    tempIncome.additionalSocialInsurance !== 0;
+  const tempIncomeCostLabel =
+    tempIncome.additionalSocialInsurance !== 0
+      ? 'additional tax and social insurance'
+      : 'income and residence tax';
   const hasHighDonationCost = hasHighDonationOutOfPocketCost(results.furusatoNozei);
   const hasHighTotalOutOfPocket = hasHighOutOfPocketCost(results.furusatoNozei);
   const netEstimatedBenefit = tempIncome.estimatedGiftsValue - totalOutOfPocketCost;
@@ -125,8 +134,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       </Typography>
     ) : null;
 
-  const formattedOutOfPocketTotal = `${hasTemporaryIncomeTax ? '≈ ' : ''}${formatJPY(totalOutOfPocketCost)}`;
-  const formattedOutOfPocketDeduction = `${hasTemporaryIncomeTax ? '≈ ' : ''}${formatJPY(-totalOutOfPocketCost)}`;
+  const formattedOutOfPocketTotal = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(totalOutOfPocketCost)}`;
+  const formattedOutOfPocketDeduction = `${hasTemporaryIncomeCost ? '≈ ' : ''}${formatJPY(-totalOutOfPocketCost)}`;
 
   return (
     <Box>
@@ -307,25 +316,29 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
 
         <ResultRow
           label={
-            tempIncome.isTaxable ? (
+            hasPositiveTemporaryIncomeCost ? (
               <Box component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                Tax on Gift Temporary Income
+                Gift Temporary Income Effect
               </Box>
             ) : (
-              'Tax on Gift Temporary Income'
+              'Gift Temporary Income Effect'
             )
           }
-          disclosure={{
-            expanded: showTemporaryIncomeDetails,
-            onToggle: () => setShowTemporaryIncomeDetails(open => !open),
-            controlsId: TEMPORARY_INCOME_DETAILS_ID,
-          }}
+          {...(hasEffectBreakdown && {
+            disclosure: {
+              expanded: showTemporaryIncomeDetails,
+              onToggle: () => setShowTemporaryIncomeDetails(open => !open),
+              controlsId: TEMPORARY_INCOME_DETAILS_ID,
+            },
+          })}
           labelSuffix={<FurusatoTemporaryIncomeTooltip estimate={tempIncome} />}
           value={
-            tempIncome.isTaxable ? (
+            hasPositiveTemporaryIncomeCost ? (
               <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
-                ≈ {formatJPY(tempIncome.additionalTotalTax)}
+                ≈ {formatJPY(tempIncome.additionalTotalCost)}
               </Box>
+            ) : hasTemporaryIncomeCost ? (
+              `≈ ${formatJPY(tempIncome.additionalTotalCost)}`
             ) : (
               formatJPY(0)
             )
@@ -333,71 +346,29 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           type="indented"
         />
 
-        <Box id={TEMPORARY_INCOME_DETAILS_ID}>
-          <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
-            <ResultRow
-              label={`Value of gifts received (${giftsPct})`}
-              value={`≈ ${formatJPY(tempIncome.estimatedGiftsValue)}`}
-              type="detail"
-            />
-            <ResultRow
-              label={`Estimated shipping (${shippingPct})`}
-              value={`≈ ${formatJPY(tempIncome.estimatedShippingCost)}`}
-              type="detail"
-            />
-            <ResultRow
-              label="Estimated economic benefit"
-              value={`≈ ${formatJPY(tempIncome.estimatedEconomicBenefit)}`}
-              type="detail-subtotal"
-            />
-            <ResultRow
-              label={
-                <span>
-                  Net temporary income
-                  <SimpleTooltip>
-                    Estimated economic benefit minus the ¥500,000 annual special deduction
-                    (特別控除), shared across all temporary income in the calendar year (floored at
-                    ¥0). Half (½) of any positive net temporary income is added to aggregate taxable
-                    income (総所得金額).
-                  </SimpleTooltip>
-                </span>
-              }
-              value={
-                tempIncome.isTaxable
-                  ? `≈ ${formatJPY(tempIncome.netTemporaryIncome)}`
-                  : formatJPY(0)
-              }
-              type={tempIncome.isTaxable ? 'detail' : 'detail-subtotal'}
-            />
-            {tempIncome.isTaxable && (
-              <>
+        {hasEffectBreakdown && (
+          <Box id={TEMPORARY_INCOME_DETAILS_ID}>
+            <Collapse in={showTemporaryIncomeDetails} unmountOnExit>
+              <ResultRow
+                label="Income tax & surtax"
+                value={formatJPY(tempIncome.additionalNationalIncomeTax)}
+                type="detail"
+              />
+              <ResultRow
+                label="Residence tax"
+                value={formatJPY(tempIncome.additionalResidenceTax)}
+                type="detail"
+              />
+              {tempIncome.additionalSocialInsurance !== 0 && (
                 <ResultRow
-                  label="Taxable temporary income (½)"
-                  value={
-                    <Box component="span" sx={{ color: 'warning.main', fontWeight: 700 }}>
-                      ≈ {formatJPY(tempIncome.taxableTemporaryIncome)}
-                    </Box>
-                  }
-                  type="detail-subtotal"
+                  label="Social insurance"
+                  value={formatJPY(tempIncome.additionalSocialInsurance)}
+                  type="detail"
                 />
-                {hasTemporaryIncomeTax && (
-                  <>
-                    <ResultRow
-                      label="Income tax & surtax"
-                      value={formatJPY(tempIncome.additionalNationalIncomeTax)}
-                      type="detail"
-                    />
-                    <ResultRow
-                      label="Residence tax"
-                      value={formatJPY(tempIncome.additionalResidenceTax)}
-                      type="detail"
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </Collapse>
-        </Box>
+              )}
+            </Collapse>
+          </Box>
+        )}
 
         <ResultRow
           label={
@@ -411,13 +382,13 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   iconAriaLabel="High out-of-pocket cost warning"
                 >
                   <Box>
-                    {!hasHighDonationCost && hasTemporaryIncomeTax ? (
+                    {!hasHighDonationCost && hasPositiveTemporaryIncomeCost ? (
                       <>
                         <Typography variant="body2">
                           The estimated out-of-pocket cost is higher than the expected ≈2,000 yen
                           because the return gifts are estimated to create taxable temporary income
                           (一時所得) exceeding the ¥500,000 annual special deduction, adding ≈{' '}
-                          {formatJPY(tempIncome.additionalTotalTax)} in income and residence tax (on
+                          {formatJPY(tempIncome.additionalTotalCost)} in {tempIncomeCostLabel} (on
                           top of the {formatJPY(donationOutOfPocketCost)} base donation cost).
                         </Typography>
                         <Typography variant="body2" sx={{ mt: 1 }}>
@@ -505,13 +476,13 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                             )}
                           </>
                         )}
-                        {hasTemporaryIncomeTax && (
+                        {hasPositiveTemporaryIncomeCost && (
                           <Typography variant="body2" sx={{ mt: 1 }}>
                             In addition, estimated taxable temporary income from the return gifts
-                            adds ≈ {formatJPY(tempIncome.additionalTotalTax)} in income and
-                            residence tax ({formatJPY(donationOutOfPocketCost)} donation cost before
-                            temporary income tax + ≈ {formatJPY(tempIncome.additionalTotalTax)}{' '}
-                            temporary income tax = ≈ {formatJPY(totalOutOfPocketCost)} total).
+                            adds ≈ {formatJPY(tempIncome.additionalTotalCost)} in{' '}
+                            {tempIncomeCostLabel} ({formatJPY(donationOutOfPocketCost)} base
+                            donation cost + ≈ {formatJPY(tempIncome.additionalTotalCost)} gift
+                            temporary income effect = ≈ {formatJPY(totalOutOfPocketCost)} total).
                           </Typography>
                         )}
                       </>
@@ -558,7 +529,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   <Typography variant="body2">
                     Delivery and shipping costs ({shippingPct} nationwide average) are excluded from
                     the usable gift value shown here, though bundled shipping can count toward
-                    temporary income (see Tax on Gift Temporary Income above).
+                    temporary income (see Gift Temporary Income Effect above).
                   </Typography>
                   <SourceLinks sources={GIFT_VALUE_SOURCES} />
                 </Box>

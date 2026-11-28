@@ -64,13 +64,33 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
   });
 
-  it('renders orange warning icon in Furusato tab label when estimated temporary income is taxable without adding tax', () => {
+  it('does not render warning icon in Furusato tab label when taxable temporary income causes zero additional cost', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 2_200_000,
         incomeTaxReduction: 1_009_900,
         residenceTaxReduction: 1_188_100,
-        temporaryIncomeTax: { nationalIncomeTax: 0, residenceTax: 0, total: 0 },
+        temporaryIncomeEffect: { nationalIncomeTax: 0, residenceTax: 0, total: 0 },
+      }),
+    });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <TakeHomeResultsDisplay results={results} inputs={baseInputs} />
+      </ThemeProvider>,
+    );
+
+    expect(screen.queryByTitle('Estimated taxable temporary income')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('High out-of-pocket cost')).not.toBeInTheDocument();
+  });
+
+  it('renders orange warning icon in Furusato tab label when temporary income adds cost within ¥2,200 margin', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 1_554_000,
+        incomeTaxReduction: 633_000,
+        residenceTaxReduction: 919_000,
+        temporaryIncomeEffect: { nationalIncomeTax: 100, residenceTax: 0, total: 100 },
       }),
     });
 
@@ -85,13 +105,13 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
   });
 
-  it('combines warning title when temporary income tax or donation cost raises out-of-pocket cost alongside taxable temporary income', () => {
+  it('combines warning title when temporary income effect or donation cost raises out-of-pocket cost', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       furusatoNozei: makeFurusatoNozeiDetails({
         limit: 2_200_000,
         incomeTaxReduction: 1_009_900,
         residenceTaxReduction: 1_188_100,
-        temporaryIncomeTax: {
+        temporaryIncomeEffect: {
           nationalIncomeTax: 47_800,
           residenceTax: 10_400,
           total: 58_200,

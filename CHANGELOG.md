@@ -6,7 +6,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### New
 
-- Added Temporary Income ([一時所得](https://www.nta.go.jp/law/shitsugi/shotoku/02/37.htm)) tax breakdown in the Furusato Nozei tab for return gifts. When the estimated economic benefit of gifts exceeds the ¥500,000 special deduction for temporary income, the resulting income and residence tax on the temporary income is shown in the Cost Breakdown.
+- Added Gift Temporary Income Effect ([一時所得](https://www.nta.go.jp/law/shitsugi/shotoku/02/37.htm)) breakdown in the Furusato Nozei tab for return gifts. When the estimated economic benefit of gifts exceeds the ¥500,000 special deduction for temporary income, the resulting incremental tax and social insurance effect is shown in the Cost Breakdown.
 
 ## 2026-11-27: Fix Furusato Nozei limit for 2026 basic deduction increase
 

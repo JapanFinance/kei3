@@ -1564,28 +1564,32 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTax.totalResidenceTax - withFurusato.residenceTax.totalResidenceTax,
       );
 
+      const existingTemporaryIncome = Math.max(0, inputs.temporaryIncome || 0);
       const benefit = estimateFurusatoEconomicBenefit(furusatoLimit.finalLimit);
-      let temporaryIncomeTax: FurusatoNozeiDetails['temporaryIncomeTax'];
-      if (benefit.estimatedEconomicBenefit > TEMPORARY_INCOME_SPECIAL_DEDUCTION) {
+      let temporaryIncomeEffect: FurusatoNozeiDetails['temporaryIncomeEffect'];
+      if (
+        benefit.estimatedEconomicBenefit > 0 &&
+        existingTemporaryIncome + benefit.estimatedEconomicBenefit >
+          TEMPORARY_INCOME_SPECIAL_DEDUCTION
+      ) {
         const withFurusatoAndTempIncome = calculateTaxes({
           ...inputs,
           furusatoDonation: furusatoLimit.finalLimit,
-          temporaryIncome:
-            Math.max(0, inputs.temporaryIncome || 0) + benefit.estimatedEconomicBenefit,
+          temporaryIncome: existingTemporaryIncome + benefit.estimatedEconomicBenefit,
         });
-        const nationalIncomeTaxIncrease = Math.max(
-          0,
-          withFurusatoAndTempIncome.nationalIncomeTax - withFurusato.nationalIncomeTax,
-        );
-        const residenceTaxIncrease = Math.max(
-          0,
+        const nationalIncomeTaxDelta =
+          withFurusatoAndTempIncome.nationalIncomeTax - withFurusato.nationalIncomeTax;
+        const residenceTaxDelta =
           withFurusatoAndTempIncome.residenceTax.totalResidenceTax -
-            withFurusato.residenceTax.totalResidenceTax,
-        );
-        temporaryIncomeTax = {
-          nationalIncomeTax: nationalIncomeTaxIncrease,
-          residenceTax: residenceTaxIncrease,
-          total: nationalIncomeTaxIncrease + residenceTaxIncrease,
+          withFurusato.residenceTax.totalResidenceTax;
+        const socialInsuranceDelta =
+          totalSocialInsurancePaid(withFurusatoAndTempIncome) -
+          totalSocialInsurancePaid(withFurusato);
+        temporaryIncomeEffect = {
+          nationalIncomeTax: nationalIncomeTaxDelta,
+          residenceTax: residenceTaxDelta,
+          ...(socialInsuranceDelta !== 0 && { socialInsurance: socialInsuranceDelta }),
+          total: nationalIncomeTaxDelta + residenceTaxDelta + socialInsuranceDelta,
         };
       }
 
@@ -1595,7 +1599,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxDonationBasicDeduction: furusatoLimit.residenceTaxDonationBasicDeduction,
         residenceTaxSpecialDeduction: furusatoLimit.residenceTaxSpecialDeduction,
         residenceTaxReduction,
-        ...(temporaryIncomeTax && { temporaryIncomeTax }),
+        ...(temporaryIncomeEffect && { temporaryIncomeEffect }),
       };
     }
   }

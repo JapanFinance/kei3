@@ -10,10 +10,7 @@ import Typography from '@mui/material/Typography';
 import React from 'react';
 
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
-import {
-  hasHighOutOfPocketCost,
-  hasTaxableFurusatoTemporaryIncome,
-} from '../../utils/furusatoNozei';
+import { hasFurusatoTemporaryIncomeCost, hasHighOutOfPocketCost } from '../../utils/furusatoNozei';
 import { useLoadMilestone } from '../../utils/loadMilestones';
 import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';
@@ -84,7 +81,7 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
   const [currentTab, setCurrentTab] = React.useState(0);
 
   const highOutOfPocketCost = hasHighOutOfPocketCost(results.furusatoNozei);
-  const taxableTemporaryIncome = hasTaxableFurusatoTemporaryIncome(results.furusatoNozei);
+  const taxableTemporaryIncome = hasFurusatoTemporaryIncomeCost(results.furusatoNozei);
   const furusatoWarningTitle =
     highOutOfPocketCost && taxableTemporaryIncome
       ? 'High out-of-pocket cost and estimated taxable temporary income'

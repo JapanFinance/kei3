@@ -60,14 +60,14 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
   const giftsPct = FURUSATO_AVERAGE_GIFT_COST_RATE.toPercent(1);
   const shippingPct = FURUSATO_AVERAGE_SHIPPING_COST_RATE.toPercent(1);
   const combinedPct = FURUSATO_AVERAGE_ECONOMIC_BENEFIT_RATE.toPercent(1);
+  const hasCost = estimate.additionalTotalCost > 0;
+  const hasNetTempIncome = estimate.netTemporaryIncome > 0;
 
   return (
     <DetailedTooltip
       title="Temporary Income from Furusato Nozei"
-      icon={
-        estimate.isTaxable ? <WarningIcon fontSize="small" color="warning" /> : SIMPLE_TOOLTIP_ICON
-      }
-      {...(estimate.isTaxable && {
+      icon={hasCost ? <WarningIcon fontSize="small" color="warning" /> : SIMPLE_TOOLTIP_ICON}
+      {...(hasCost && {
         iconSx: { color: 'warning.main' },
         iconAriaLabel: 'Taxable temporary income warning',
       })}
@@ -89,49 +89,74 @@ export const FurusatoTemporaryIncomeTooltip: React.FC<FurusatoTemporaryIncomeToo
           combined) as a conservative estimate; actual amounts depend on each municipality's
           valuation for actual gifts received.
         </Typography>
-        <Typography variant="body2" sx={{ mb: estimate.additionalTotalTax > 0 ? 1 : 0 }}>
+        <Typography variant="body2" sx={{ mb: 1 }}>
           <strong>Delivery Year & Filing:</strong> Temporary Income from return gifts is recognized
           in the calendar year delivered, not the year donated. When taxable temporary income
           arises, filing a tax return is required, so the One-Stop Exception (ワンストップ特例制度)
           does not apply to that year's donations.
         </Typography>
-        {estimate.additionalTotalTax > 0 && (
-          <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              Additional Tax Breakdown
-            </Typography>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-              <tbody>
+        <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+            Estimated Temporary Income
+          </Typography>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '2px 0' }}>Value of gifts received ({giftsPct}):</td>
+                <td style={{ padding: '2px 0', textAlign: 'right' }}>
+                  ≈ {formatJPY(estimate.estimatedGiftsValue)}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '2px 0' }}>Estimated shipping ({shippingPct}):</td>
+                <td style={{ padding: '2px 0', textAlign: 'right' }}>
+                  ≈ {formatJPY(estimate.estimatedShippingCost)}
+                </td>
+              </tr>
+              <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                <td style={{ padding: '4px 0', fontWeight: 600 }}>Estimated economic benefit:</td>
+                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                  ≈ {formatJPY(estimate.estimatedEconomicBenefit)}
+                </td>
+              </Box>
+              <tr>
+                <td style={{ padding: '2px 0' }}>Annual special deduction (特別控除):</td>
+                <td style={{ padding: '2px 0', textAlign: 'right' }}>
+                  {formatJPY(-estimate.specialDeduction)}
+                </td>
+              </tr>
+              <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                <td style={{ padding: '4px 0', fontWeight: 600 }}>Net temporary income:</td>
+                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                  {hasNetTempIncome ? `≈ ${formatJPY(estimate.netTemporaryIncome)}` : formatJPY(0)}
+                </td>
+              </Box>
+              {hasNetTempIncome && (
                 <tr>
-                  <td style={{ padding: '2px 0' }}>Income tax & surtax:</td>
-                  <td style={{ padding: '2px 0', textAlign: 'right' }}>
-                    {formatJPY(estimate.additionalNationalIncomeTax)}
+                  <td style={{ padding: '2px 0', fontWeight: 600 }}>
+                    Taxable temporary income (½):
                   </td>
+                  <Box
+                    component="td"
+                    sx={{
+                      padding: '2px 0',
+                      textAlign: 'right',
+                      fontWeight: 600,
+                      ...(hasCost && { color: 'warning.main' }),
+                    }}
+                  >
+                    ≈ {formatJPY(estimate.taxableTemporaryIncome)}
+                  </Box>
                 </tr>
-                <tr>
-                  <td style={{ padding: '2px 0' }}>Residence tax:</td>
-                  <td style={{ padding: '2px 0', textAlign: 'right' }}>
-                    {formatJPY(estimate.additionalResidenceTax)}
-                  </td>
-                </tr>
-                <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-                  <td style={{ padding: '4px 0', fontWeight: 600 }}>Total additional tax:</td>
-                  <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                    {formatJPY(estimate.additionalTotalTax)}
-                  </td>
-                </Box>
-              </tbody>
-            </table>
-            <Typography
-              variant="caption"
-              sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}
-            >
-              Calculated by the tax engine on the estimated temporary income above (assuming
-              donations at the limit, no other temporary income, and delivery within the same tax
-              year).
-            </Typography>
-          </Box>
-        )}
+              )}
+            </tbody>
+          </table>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+            {hasNetTempIncome
+              ? 'Half (½) of positive net temporary income is added to aggregate taxable income (総所得金額). Calculated by the tax engine assuming donations at the limit, no other temporary income, and delivery within the same tax year.'
+              : `The ¥500,000 special deduction (特別控除) is shared across all temporary income in the calendar year. Half (½) of any excess is added to aggregate net income (総所得金額).`}
+          </Typography>
+        </Box>
         <SourceLinks sources={TEMPORARY_INCOME_SOURCES} />
       </Box>
     </DetailedTooltip>

@@ -1338,16 +1338,19 @@ export type NonTaxableResidenceTaxStatus =
   | 'incomeThreshold';
 
 /**
- * Incremental income and residence tax computed by the tax engine when the estimated economic
- * benefit of Furusato Nozei return gifts (26.5% goods + 5.7% shipping) exceeds the ¥500,000
- * temporary income special deduction.
+ * Incremental income tax, residence tax, and (when below social insurance caps) social insurance
+ * premium changes computed by the tax engine when total temporary income including the estimated
+ * economic benefit of Furusato Nozei return gifts (26.5% goods + 5.7% shipping) exceeds the
+ * ¥500,000 temporary income special deduction.
  */
-export interface FurusatoTemporaryIncomeTax {
-  /** Incremental national income tax (incl. reconstruction surtax, credits, and minimum tax). */
+export interface FurusatoTemporaryIncomeEffect {
+  /** Incremental national income tax (incl. reconstruction surtax, credits, and minimum tax). May be negative in deduction-cliff credit or social insurance interactions. */
   nationalIncomeTax: number;
-  /** Incremental residence tax (municipal + prefectural, after ¥100 flooring and credits). */
+  /** Incremental residence tax (municipal + prefectural, after ¥100 flooring and credits). May be negative in deduction-cliff credit or social insurance interactions. */
   residenceTax: number;
-  /** Total additional tax (`nationalIncomeTax + residenceTax`). */
+  /** Incremental social insurance premiums (NHI, 75+ Latter-Stage Elderly, 65+ LTC Category 1, or National Pension exemption loss). Omitted when 0. */
+  socialInsurance?: number | undefined;
+  /** Total net cost change (`nationalIncomeTax + residenceTax + (socialInsurance ?? 0)`). */
   total: number;
 }
 
@@ -1357,7 +1360,7 @@ export interface FurusatoNozeiDetails {
   residenceTaxDonationBasicDeduction: number;
   residenceTaxSpecialDeduction: number;
   residenceTaxReduction: number;
-  temporaryIncomeTax?: FurusatoTemporaryIncomeTax | undefined;
+  temporaryIncomeEffect?: FurusatoTemporaryIncomeEffect | undefined;
 }
 
 export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {
