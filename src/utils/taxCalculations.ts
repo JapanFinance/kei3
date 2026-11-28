@@ -54,7 +54,10 @@ import {
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
 import { calculateForeignTaxCredit } from './foreignTaxCredit';
-import { estimateFurusatoTemporaryIncome } from './furusatoNozei';
+import {
+  estimateFurusatoTemporaryIncome,
+  evaluateOneStopIneligibilityReasons,
+} from './furusatoNozei';
 import {
   calculateHealthInsuranceBreakdown,
   calculateHouseholdNHIBreakdown,
@@ -97,6 +100,7 @@ import {
 import { calculatePersonalDeductions } from './personalDeductions';
 import {
   calculateFurusatoLimit,
+  calculateFurusatoOneStopResidenceCredit,
   calculateFurusatoResidenceCredit,
   calculateResidenceTax,
   FURUSATO_OUT_OF_POCKET_COST,
@@ -1591,6 +1595,66 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         };
       }
 
+      const ineligibleReasons = evaluateOneStopIneligibilityReasons({
+        hasTaxableTemporaryIncome: temporaryIncomeEffect !== undefined,
+        hasEmploymentIncome,
+        grossEmploymentIncome,
+        netEmploymentIncome,
+        grossPublicPensionIncome,
+        netPublicPensionIncome,
+        netBusinessAndMiscIncome,
+        businessBlueFilerDeduction,
+        hasRealEstateIncome: inputs.incomeStreams.some(s => s.type === 'realEstate'),
+        incomeStreams: inputs.incomeStreams,
+        hasReportedInvestmentIncome:
+          hasSeparateReportedInvestment || aggregateDividends > 0 || aggregateInterest > 0,
+        additionalDeductionItems: additionalDeductions.items,
+        dcPlanContributions: idecoDeduction,
+        familyNationalPension: familyNationalPension ?? 0,
+        homeLoanCreditAmount: inputs.homeLoanTaxCredit?.creditAmount ?? 0,
+        homeLoanMoveInYear: inputs.homeLoanTaxCredit?.moveInYear,
+        incomeYear,
+        hasForeignTaxCredit: foreignTax > 0,
+        hasHighIncomeMinimumTax: highIncomeMinimumTax !== undefined,
+      });
+
+      let oneStop: FurusatoNozeiDetails['oneStop'];
+      if (ineligibleReasons.length > 0) {
+        oneStop = { eligible: false, ineligibleReasons };
+      } else {
+        const oneStopCredit = calculateFurusatoOneStopResidenceCredit(
+          furusatoLimit.finalLimit,
+          preCreditResidenceTax,
+          incomeYear,
+          nationalIncomeTaxBasicDeduction,
+        );
+        const oneStopResidenceTax = calculateResidenceTax(
+          netIncome,
+          socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
+          dependentDeductions,
+          incomeYear,
+          inputs.ageRange,
+          inputs.personalCircumstances,
+          {
+            homeLoan: homeLoanResidenceCredit,
+            ...(foreignResidenceCredit && { foreignTax: foreignResidenceCredit }),
+            furusato: { city: oneStopCredit.city, prefecture: oneStopCredit.prefecture },
+          },
+          separateNetIncome,
+        );
+        const oneStopResidenceTaxReduction = Math.max(
+          0,
+          residenceTax.totalResidenceTax - oneStopResidenceTax.totalResidenceTax,
+        );
+        oneStop = {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: oneStopCredit.declarationSpecialCredit,
+          municipalTaxCredit: oneStopCredit.city,
+          prefecturalTaxCredit: oneStopCredit.prefecture,
+          residenceTaxReduction: oneStopResidenceTaxReduction,
+        };
+      }
+
       furusatoNozei = {
         limit: furusatoLimit.finalLimit,
         incomeTaxReduction,
@@ -1598,6 +1662,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxSpecialDeduction: furusatoLimit.residenceTaxSpecialDeduction,
         residenceTaxReduction,
         ...(temporaryIncomeEffect && { temporaryIncomeEffect }),
+        oneStop,
       };
     }
   }

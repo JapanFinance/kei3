@@ -9,16 +9,15 @@ import {
   LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
-import {
-  DEFAULT_INCOME_YEAR,
-  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-  type SeparateTaxationReportedIncome,
-} from '../types/tax';
+import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   estimateFurusatoTemporaryIncome,
+  evaluateOneStopIneligibilityReasons,
+  getFurusatoOneStopOutOfPocketCost,
   getFurusatoOutOfPocketCost,
   getOneStopIneligibilityReasons,
   isHighOutOfPocketCost,
+  type OneStopEligibilityInputs,
 } from '../utils/furusatoNozei';
 import { calculateTaxes, totalSocialInsurancePaid } from '../utils/taxCalculations';
 import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
@@ -67,6 +66,41 @@ describe('getFurusatoOutOfPocketCost and isHighOutOfPocketCost', () => {
     expect(isHighOutOfPocketCost(2_201)).toBe(true);
     expect(isHighOutOfPocketCost(getFurusatoOutOfPocketCost(nominal))).toBe(false);
     expect(isHighOutOfPocketCost(getFurusatoOutOfPocketCost(highDonation))).toBe(true);
+  });
+
+  it('derives One-Stop out-of-pocket cost and high-cost warning when eligible', () => {
+    const eligibleNominal = makeFurusatoNozeiDetails({
+      limit: 98_000,
+      incomeTaxReduction: 9_800,
+      residenceTaxReduction: 76_400,
+      oneStop: {
+        eligible: true,
+        residenceTaxDeclarationSpecialCredit: 19_605,
+        municipalTaxCredit: 57_602,
+        prefecturalTaxCredit: 38_401,
+        residenceTaxReduction: 96_000,
+      },
+    });
+    const eligibleHigh = makeFurusatoNozeiDetails({
+      limit: 50_000,
+      oneStop: {
+        eligible: true,
+        residenceTaxDeclarationSpecialCredit: 5_000,
+        municipalTaxCredit: 28_800,
+        prefecturalTaxCredit: 19_200,
+        residenceTaxReduction: 40_000,
+      },
+    });
+    const ineligible = makeFurusatoNozeiDetails({
+      limit: 98_000,
+      oneStop: { eligible: false, ineligibleReasons: ['medicalExpensesDeduction'] },
+    });
+
+    expect(getFurusatoOneStopOutOfPocketCost(eligibleNominal)).toBe(2_000);
+    expect(isHighOutOfPocketCost(getFurusatoOneStopOutOfPocketCost(eligibleNominal)!)).toBe(false);
+    expect(getFurusatoOneStopOutOfPocketCost(eligibleHigh)).toBe(10_000);
+    expect(isHighOutOfPocketCost(getFurusatoOneStopOutOfPocketCost(eligibleHigh)!)).toBe(true);
+    expect(getFurusatoOneStopOutOfPocketCost(ineligible)).toBeUndefined();
   });
 });
 
@@ -404,84 +438,147 @@ describe('taxCalculations Furusato Nozei temporary income integration', () => {
   });
 });
 
-describe('getOneStopIneligibilityReasons', () => {
+describe('evaluateOneStopIneligibilityReasons', () => {
+  const baseEligibilityInputs: OneStopEligibilityInputs = {
+    hasTaxableTemporaryIncome: false,
+    hasEmploymentIncome: true,
+    grossEmploymentIncome: 6_000_000,
+    netEmploymentIncome: 4_360_000,
+    grossPublicPensionIncome: 0,
+    netPublicPensionIncome: 0,
+    netBusinessAndMiscIncome: 0,
+    businessBlueFilerDeduction: 0,
+    hasRealEstateIncome: false,
+    incomeStreams: [{ id: 's1', type: 'salary', amount: 6_000_000, frequency: 'annual' }],
+    hasReportedInvestmentIncome: false,
+    additionalDeductionItems: [],
+    dcPlanContributions: 0,
+    familyNationalPension: 0,
+    homeLoanCreditAmount: 0,
+    homeLoanMoveInYear: undefined,
+    incomeYear: 2026,
+    hasForeignTaxCredit: false,
+    hasHighIncomeMinimumTax: false,
+  };
+
   it('returns empty array for an ordinary salary earner with non-taxable gift benefit', () => {
-    const results = makeTakeHomeResults({
-      grossEmploymentIncome: 6_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({
-        limit: 60_000,
-        incomeTaxReduction: 5_800,
-        residenceTaxReduction: 52_200,
-      }),
-    });
-
-    expect(getOneStopIneligibilityReasons(results)).toEqual([]);
+    expect(evaluateOneStopIneligibilityReasons(baseEligibilityInputs)).toEqual([]);
   });
 
-  it('detects taxable temporary income and salary over ¥20,000,000', () => {
-    const results = makeTakeHomeResults({
-      grossEmploymentIncome: 44_000_000,
-      furusatoNozei: makeFurusatoNozeiDetails({
-        limit: 1_830_000,
-        incomeTaxReduction: 760_600,
-        residenceTaxReduction: 988_200,
-        temporaryIncomeEffect: { nationalIncomeTax: 18_400, residenceTax: 4_000, total: 22_400 },
-      }),
-    });
-
-    expect(getOneStopIneligibilityReasons(results)).toEqual([
-      'taxableTemporaryIncome',
-      'employmentIncomeOverThreshold',
-    ]);
-  });
-
-  it('enforces exact statutory thresholds for employment and public pension income', () => {
-    const atThreshold = makeTakeHomeResults({
+  it('enforces exact statutory thresholds for salary, pension, and combined net income', () => {
+    const atThresholds = evaluateOneStopIneligibilityReasons({
+      ...baseEligibilityInputs,
       grossEmploymentIncome: 20_000_000,
+      netEmploymentIncome: 18_050_000,
       grossPublicPensionIncome: 4_000_000,
+      netPublicPensionIncome: 0,
     });
-    const overThreshold = makeTakeHomeResults({
+    const overThresholds = evaluateOneStopIneligibilityReasons({
+      ...baseEligibilityInputs,
       grossEmploymentIncome: 20_000_001,
+      netEmploymentIncome: 18_050_001,
       grossPublicPensionIncome: 4_000_001,
+      netPublicPensionIncome: 1,
     });
 
-    expect(getOneStopIneligibilityReasons(atThreshold)).toEqual([]);
-    expect(getOneStopIneligibilityReasons(overThreshold)).toEqual([
+    expect(atThresholds).toEqual([]);
+    expect(overThresholds).toEqual([
       'employmentIncomeOverThreshold',
       'publicPensionOverThreshold',
+      'employmentAndPublicPension',
     ]);
   });
 
-  it('detects business/misc, real estate, reported investment, and medical expense triggers', () => {
-    const separate: SeparateTaxationReportedIncome = {
-      gross: { capitalGains: 200_000, dividends: 0 },
-      lossOffsetAgainstDividends: 0,
-      unabsorbedQualifyingLoss: 0,
-      nonQualifyingLoss: 0,
-      netIncome: { capitalGains: 200_000, dividends: 0 },
-      taxable: { capitalGains: 200_000, dividends: 0 },
-      nationalIncomeTaxBase: 30_000,
-    };
-
-    const results = makeTakeHomeResults({
+  it('detects all statutory income, deduction, and tax credit disqualifiers', () => {
+    const reasons = evaluateOneStopIneligibilityReasons({
+      ...baseEligibilityInputs,
+      hasTaxableTemporaryIncome: true,
       netBusinessAndMiscIncome: -100_000,
       businessBlueFilerDeduction: 100_000,
-      realEstate: { netIncome: 500_000, blueFilerDeduction: 0 },
-      investmentIncome: {
-        reported: { separate },
-      },
-      additionalDeductions: {
-        national: 50_000,
-        residence: 50_000,
-        items: [{ key: 'medical', national: 50_000, residence: 50_000 }],
-      },
+      hasRealEstateIncome: true,
+      incomeStreams: [
+        { id: 'sc1', type: 'stockCompensation', amount: 1_000_000, issuerDomicile: 'foreign' },
+        {
+          id: 'pp1',
+          type: 'publicPension',
+          amount: 1_500_000,
+          payerDomicile: 'foreign',
+          treatyCredit: 'unavailable',
+          foreignTax: 0,
+        },
+      ],
+      hasReportedInvestmentIncome: true,
+      additionalDeductionItems: [{ key: 'medical', national: 50_000, residence: 50_000 }],
+      homeLoanCreditAmount: 200_000,
+      homeLoanMoveInYear: 2026,
+      hasForeignTaxCredit: true,
+      hasHighIncomeMinimumTax: true,
     });
 
-    expect(getOneStopIneligibilityReasons(results)).toEqual([
+    expect(reasons).toEqual([
+      'taxableTemporaryIncome',
       'businessOrMiscIncome',
       'realEstateIncome',
+      'foreignStockCompensation',
+      'foreignPublicPension',
       'reportedInvestmentIncome',
       'medicalExpensesDeduction',
+      'homeLoanFirstYear',
+      'foreignTaxCredit',
+      'highIncomeMinimumTax',
     ]);
+  });
+
+  it('flags pensioner unwithheld deductions when not employed and ignores Year 2+ home loan', () => {
+    const pensionerWithIdeco = evaluateOneStopIneligibilityReasons({
+      ...baseEligibilityInputs,
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      netEmploymentIncome: 0,
+      grossPublicPensionIncome: 3_500_000,
+      netPublicPensionIncome: 2_400_000,
+      dcPlanContributions: 120_000,
+      homeLoanCreditAmount: 200_000,
+      homeLoanMoveInYear: 2024,
+    });
+    const salaryYear2HomeLoan = evaluateOneStopIneligibilityReasons({
+      ...baseEligibilityInputs,
+      homeLoanCreditAmount: 200_000,
+      homeLoanMoveInYear: 2024,
+    });
+
+    expect(pensionerWithIdeco).toEqual(['pensionerUnwithheldDeductions']);
+    expect(salaryYear2HomeLoan).toEqual([]);
+  });
+});
+
+describe('getOneStopIneligibilityReasons', () => {
+  it('returns engine-evaluated ineligible reasons and [] when eligible or absent', () => {
+    const ineligible = makeTakeHomeResults({
+      grossEmploymentIncome: 30_000_000,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 100_000,
+        oneStop: { eligible: false, ineligibleReasons: ['homeLoanFirstYear'] },
+      }),
+    });
+    const eligible = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 100_000,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 10_000,
+          municipalTaxCredit: 58_800,
+          prefecturalTaxCredit: 39_200,
+          residenceTaxReduction: 98_000,
+        },
+      }),
+    });
+    const absent = makeTakeHomeResults({
+      grossEmploymentIncome: 30_000_000,
+    });
+
+    expect(getOneStopIneligibilityReasons(ineligible)).toEqual(['homeLoanFirstYear']);
+    expect(getOneStopIneligibilityReasons(eligible)).toEqual([]);
+    expect(getOneStopIneligibilityReasons(absent)).toEqual([]);
   });
 });

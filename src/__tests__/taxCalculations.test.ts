@@ -5486,6 +5486,10 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         residenceTaxDonationBasicDeduction: 6_700,
         residenceTaxSpecialDeduction: 56_880,
         residenceTaxReduction: 63_300,
+        oneStop: {
+          eligible: false,
+          ineligibleReasons: ['reportedInvestmentIncome', 'foreignTaxCredit'],
+        },
       });
       expect(getFurusatoOutOfPocketCost(result.furusatoNozei)).toBe(3_100);
       expect(

@@ -131,4 +131,85 @@ describe('TakeHomeResults Furusato tab warning icon', () => {
     expect(titleEl).toBeInTheDocument();
     expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
   });
+
+  it('uses tax-return-specific warning title when One-Stop avoids high out-of-pocket cost', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 98_000,
+        incomeTaxReduction: 9_800,
+        residenceTaxReduction: 76_400,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 19_605,
+          municipalTaxCredit: 57_602,
+          prefecturalTaxCredit: 38_401,
+          residenceTaxReduction: 96_000,
+        },
+      }),
+    });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <TakeHomeResultsDisplay results={results} inputs={baseInputs} />
+      </ThemeProvider>,
+    );
+
+    const titleEl = screen.getByTitle('High out-of-pocket cost when filing a tax return');
+    expect(titleEl).toBeInTheDocument();
+    expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
+  });
+
+  it('uses standard high out-of-pocket warning title when One-Stop cost is also elevated', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 50_000,
+        incomeTaxReduction: 0,
+        residenceTaxReduction: 40_000,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 5_000,
+          municipalTaxCredit: 27_000,
+          prefecturalTaxCredit: 18_000,
+          residenceTaxReduction: 40_000,
+        },
+      }),
+    });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <TakeHomeResultsDisplay results={results} inputs={baseInputs} />
+      </ThemeProvider>,
+    );
+
+    const titleEl = screen.getByTitle('High out-of-pocket cost');
+    expect(titleEl).toBeInTheDocument();
+    expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
+  });
+
+  it('uses One-Stop-specific warning title when One-Stop cost is elevated while Tax Return is nominal', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 50_000,
+        incomeTaxReduction: 8_000,
+        residenceTaxReduction: 40_000,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 5_000,
+          municipalTaxCredit: 27_000,
+          prefecturalTaxCredit: 18_000,
+          residenceTaxReduction: 40_000,
+        },
+      }),
+    });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <TakeHomeResultsDisplay results={results} inputs={baseInputs} />
+      </ThemeProvider>,
+    );
+
+    const titleEl = screen.getByTitle('High out-of-pocket cost when using One-Stop');
+    expect(titleEl).toBeInTheDocument();
+    expect(titleEl.parentElement).toHaveClass('MuiSvgIcon-colorWarning');
+  });
 });

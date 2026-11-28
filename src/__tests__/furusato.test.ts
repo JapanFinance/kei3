@@ -6,8 +6,15 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
-import { getFurusatoOutOfPocketCost } from '../utils/furusatoNozei';
-import { calculateFurusatoResidenceCredit } from '../utils/residenceTax';
+import {
+  getFurusatoOneStopOutOfPocketCost,
+  getFurusatoOutOfPocketCost,
+} from '../utils/furusatoNozei';
+import {
+  calculateFurusatoOneStopResidenceCredit,
+  calculateFurusatoResidenceCredit,
+  getDeclarationSpecialCreditRatio,
+} from '../utils/residenceTax';
 import { calculateTaxes } from '../utils/taxCalculations';
 import { makeDependent, makeSpouse } from './fixtures/dependents';
 
@@ -704,6 +711,306 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(credits.residenceTaxDonationBasicDeduction).toBe(9_800);
       expect(credits.city).toBe(34_452);
       expect(credits.prefecture).toBe(22_968);
+    });
+  });
+
+  describe('One-Stop Exception (ワンストップ特例制度)', () => {
+    const baseSalaryInputs = (amount: number) => ({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { id: 'test', type: 'salary' as const, amount, frequency: 'annual' as const },
+      ],
+      ageRange: 'age20to39' as const,
+      region: 'Tokyo',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+
+    it('selects the statutory 申告特例控除割合 across all 5 income tiers', () => {
+      expect(getDeclarationSpecialCreditRatio(2_000_000, 50_000).toDecimal()).toBeCloseTo(
+        5.105 / 84.895,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(2_000_001, 50_000).toDecimal()).toBeCloseTo(
+        10.21 / 79.79,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(3_350_000, 50_000).toDecimal()).toBeCloseTo(
+        10.21 / 79.79,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(3_350_001, 50_000).toDecimal()).toBeCloseTo(
+        20.42 / 69.58,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(7_000_000, 50_000).toDecimal()).toBeCloseTo(
+        20.42 / 69.58,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(7_000_001, 50_000).toDecimal()).toBeCloseTo(
+        23.483 / 66.517,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(9_050_000, 50_000).toDecimal()).toBeCloseTo(
+        23.483 / 66.517,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(9_050_001, 50_000).toDecimal()).toBeCloseTo(
+        33.693 / 56.307,
+        10,
+      );
+      expect(getDeclarationSpecialCreditRatio(50_000_000, 50_000).toDecimal()).toBeCloseTo(
+        33.693 / 56.307,
+        10,
+      );
+    });
+
+    it('calculates per-side One-Stop residence credits reconciling basic, special, and declaration credits', () => {
+      const baseline = calculateTaxes(baseSalaryInputs(6_500_000));
+      const oneStopCredits = calculateFurusatoOneStopResidenceCredit(
+        baseline.furusatoNozei.limit,
+        baseline.residenceTax,
+        2026,
+        baseline.nationalIncomeTaxBasicDeduction!,
+      );
+
+      expect(oneStopCredits.residenceTaxDonationBasicDeduction).toBe(
+        baseline.furusatoNozei.residenceTaxDonationBasicDeduction,
+      );
+      expect(oneStopCredits.residenceTaxSpecialDeduction).toBe(
+        baseline.furusatoNozei.residenceTaxSpecialDeduction,
+      );
+      expect(oneStopCredits.declarationSpecialCredit).toBeGreaterThan(0);
+      expect(oneStopCredits.city + oneStopCredits.prefecture).toBeGreaterThanOrEqual(
+        oneStopCredits.residenceTaxDonationBasicDeduction +
+          oneStopCredits.residenceTaxSpecialDeduction +
+          oneStopCredits.declarationSpecialCredit,
+      );
+    });
+
+    it('uses the basic deduction adjustment in getDeclarationSpecialCreditRatio', () => {
+      // At 課税総所得金額 2,407,000 with 人的控除差 50,000, subtracting only 50,000 yields
+      // 2,357,000 (10% tier: 10.21 / 79.79). With the 2026 ¥1,040,000 basic deduction
+      // (adding 560,000 to 人的控除差調整額), adjusted income is 1,797,000 (5% tier: 5.105 / 84.895).
+      expect(getDeclarationSpecialCreditRatio(2_407_000, 50_000).toDecimal()).toBeCloseTo(
+        10.21 / 79.79,
+        10,
+      );
+      expect(
+        getDeclarationSpecialCreditRatio(2_407_000, 50_000, 1_040_000).toDecimal(),
+      ).toBeCloseTo(5.105 / 84.895, 10);
+    });
+
+    it('avoids bracket-shift out-of-pocket spikes for eligible salaried taxpayers', () => {
+      for (const income of [5_300_000, 6_800_000, 13_100_000]) {
+        const fn = calculateFNForIncome(income);
+
+        expect(fn.oneStop?.eligible).toBe(true);
+        const oneStopCost = getFurusatoOneStopOutOfPocketCost(fn)!;
+        expect(oneStopCost).toBeLessThanOrEqual(2_200);
+        expect(oneStopCost).toBeGreaterThanOrEqual(1_800);
+        expect(oneStopCost).toBeLessThan(getFurusatoOutOfPocketCost(fn));
+      }
+    });
+
+    it('marks Year 1 home loan tax credit ineligible and preserves Year 2+ credit under One-Stop', () => {
+      const year1 = calculateTaxes({
+        ...baseSalaryInputs(6_000_000),
+        homeLoanTaxCredit: { moveInYear: 2026, creditAmount: 300_000 },
+      });
+      expect(year1.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['homeLoanFirstYear'],
+      });
+
+      const year3 = calculateTaxes({
+        ...baseSalaryInputs(3_500_000),
+        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 100_000 },
+      });
+      expect(year3.furusatoNozei.oneStop?.eligible).toBe(true);
+      expect(getFurusatoOneStopOutOfPocketCost(year3.furusatoNozei)!).toBeLessThanOrEqual(2_200);
+      expect(getFurusatoOneStopOutOfPocketCost(year3.furusatoNozei)!).toBeLessThan(
+        getFurusatoOutOfPocketCost(year3.furusatoNozei),
+      );
+    });
+
+    it('preserves full One-Stop credit even when a large Year 2+ mortgage spillover saturates the statutory cap', () => {
+      const largeMortgage = calculateTaxes({
+        ...baseSalaryInputs(3_500_000),
+        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 500_000 },
+      });
+
+      expect(largeMortgage.furusatoNozei.oneStop?.eligible).toBe(true);
+      // Tax Return loses the income-tax portion because mortgage wiped national income tax to ¥0
+      expect(getFurusatoOutOfPocketCost(largeMortgage.furusatoNozei)).toBeGreaterThan(2_200);
+      // Statutory 5% / ¥97,500 spillover cap leaves enough 所得割 for One-Stop to achieve ≈ ¥2,000
+      expect(getFurusatoOneStopOutOfPocketCost(largeMortgage.furusatoNozei)!).toBeLessThanOrEqual(
+        2_200,
+      );
+    });
+
+    it('keeps withholding-only investments and standalone domestic pensions ≤ ¥4M eligible while flagging unwithheld deductions', () => {
+      const withheldOnly = calculateTaxes({
+        ...baseSalaryInputs(5_000_000),
+        incomeStreams: [
+          ...baseSalaryInputs(5_000_000).incomeStreams,
+          {
+            id: 'wa1',
+            type: 'withholdingAccount',
+            capitalGains: 500_000,
+            dividends: 100_000,
+            foreignDividends: 0,
+            foreignTax: 0,
+            reportsCapitalGains: false,
+            reportsDividends: false,
+          },
+        ],
+      });
+      expect(withheldOnly.furusatoNozei.oneStop?.eligible).toBe(true);
+
+      const pensionOnly = calculateTaxes({
+        ...baseSalaryInputs(0),
+        incomeStreams: [
+          {
+            id: 'pp1',
+            type: 'publicPension',
+            amount: 3_500_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age65to69',
+      });
+      expect(pensionOnly.furusatoNozei.oneStop?.eligible).toBe(true);
+
+      const pensionWithIdeco = calculateTaxes({
+        ...baseSalaryInputs(0),
+        incomeStreams: [
+          {
+            id: 'pp1',
+            type: 'publicPension',
+            amount: 3_500_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age65to69',
+        dcPlanContributions: 120_000,
+      });
+      expect(pensionWithIdeco.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['pensionerUnwithheldDeductions'],
+      });
+    });
+
+    it('marks foreign stock compensation, foreign pension, combined salary+pension, and high-income minimum tax ineligible', () => {
+      const foreignStock = calculateTaxes({
+        ...baseSalaryInputs(5_000_000),
+        incomeStreams: [
+          ...baseSalaryInputs(5_000_000).incomeStreams,
+          { id: 'sc1', type: 'stockCompensation', amount: 1_000_000, issuerDomicile: 'foreign' },
+        ],
+      });
+      expect(foreignStock.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['foreignStockCompensation'],
+      });
+
+      const salaryAndPension = calculateTaxes({
+        ...baseSalaryInputs(3_000_000),
+        incomeStreams: [
+          ...baseSalaryInputs(3_000_000).incomeStreams,
+          {
+            id: 'pp1',
+            type: 'publicPension',
+            amount: 2_000_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age65to69',
+      });
+      expect(salaryAndPension.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['employmentAndPublicPension'],
+      });
+
+      const salaryWithZeroNetPension = calculateTaxes({
+        ...baseSalaryInputs(5_000_000),
+        incomeStreams: [
+          ...baseSalaryInputs(5_000_000).incomeStreams,
+          {
+            id: 'pp-zero-net',
+            type: 'publicPension',
+            amount: 1_000_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age65to69',
+      });
+      expect(salaryWithZeroNetPension.furusatoNozei.oneStop?.eligible).toBe(true);
+
+      const salaryWithSmallNetPension = calculateTaxes({
+        ...baseSalaryInputs(5_000_000),
+        incomeStreams: [
+          ...baseSalaryInputs(5_000_000).incomeStreams,
+          {
+            id: 'pp-small-net',
+            type: 'publicPension',
+            amount: 1_200_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age65to69',
+      });
+      expect(salaryWithSmallNetPension.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['employmentAndPublicPension'],
+      });
+
+      const foreignPension = calculateTaxes({
+        ...baseSalaryInputs(0),
+        incomeStreams: [
+          {
+            id: 'pp1',
+            type: 'publicPension',
+            amount: 3_500_000,
+            payerDomicile: 'foreign',
+            treatyCredit: 'unavailable',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age65to69',
+      });
+      expect(foreignPension.furusatoNozei.oneStop).toEqual({
+        eligible: false,
+        ineligibleReasons: ['foreignPublicPension'],
+      });
+
+      const minTax = calculateTaxes({
+        ...baseSalaryInputs(0),
+        incomeStreams: [
+          {
+            id: 'cg1',
+            type: 'capitalGains',
+            amount: 1_500_000_000,
+            shareType: 'listed',
+            account: 'domesticNoWithholding',
+          },
+        ],
+        manualSocialInsuranceEntry: true,
+        manualSocialInsuranceAmount: 0,
+      });
+      expect(minTax.furusatoNozei.oneStop?.eligible).toBe(false);
+      if (minTax.furusatoNozei.oneStop && !minTax.furusatoNozei.oneStop.eligible) {
+        expect(minTax.furusatoNozei.oneStop.ineligibleReasons).toContain('highIncomeMinimumTax');
+      }
     });
   });
 });

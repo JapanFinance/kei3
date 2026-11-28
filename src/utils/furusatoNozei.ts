@@ -11,14 +11,23 @@ import {
   TEMPORARY_INCOME_INCLUSION_DIVISOR,
   TEMPORARY_INCOME_SPECIAL_DEDUCTION,
 } from '../data/temporaryIncome';
-import type { FurusatoNozeiDetails, TakeHomeResults } from '../types/tax';
+import type {
+  AdditionalDeductionItem,
+  FurusatoNozeiDetails,
+  IncomeStream,
+  OneStopIneligibilityReason,
+  TakeHomeResults,
+} from '../types/tax';
+
+export type { OneStopIneligibilityReason };
 
 // The nominal out-of-pocket cost at the limit is 2,000 yen. The residence tax
 // credits are floored to 100 yen separately for the municipal and prefectural
 // portions, so an ordinary result lands up to about 200 yen above the nominal
 // figure; only a cost above that margin means the bracket shift, credit interaction,
 // or temporary income effect on the Furusato Nozei tab has actually raised the cost.
-const OUT_OF_POCKET_WARNING_THRESHOLD = 2200;
+export const OUT_OF_POCKET_ROUNDING_MARGIN = 200;
+const OUT_OF_POCKET_WARNING_THRESHOLD = 2_000 + OUT_OF_POCKET_ROUNDING_MARGIN;
 
 /**
  * Total estimated out-of-pocket cost: donation amount minus income/residence tax
@@ -36,6 +45,17 @@ export const getFurusatoOutOfPocketCost = (furusatoNozei: FurusatoNozeiDetails):
  */
 export const isHighOutOfPocketCost = (cost: number): boolean =>
   cost > OUT_OF_POCKET_WARNING_THRESHOLD;
+
+/**
+ * Total out-of-pocket cost at the limit under the One-Stop Exception system
+ * (ワンストップ特例制度), or undefined when One-Stop details are absent or ineligible.
+ */
+export const getFurusatoOneStopOutOfPocketCost = (
+  furusatoNozei: FurusatoNozeiDetails,
+): number | undefined =>
+  furusatoNozei.oneStop?.eligible
+    ? furusatoNozei.limit - furusatoNozei.oneStop.residenceTaxReduction
+    : undefined;
 
 export interface FurusatoTemporaryIncomeEstimate {
   /** Estimated procurement value of return gifts (26.5% of donation amount). */
@@ -94,49 +114,117 @@ export const estimateFurusatoTemporaryIncome = (
   };
 };
 
-export type OneStopIneligibilityReason =
-  | 'taxableTemporaryIncome'
-  | 'employmentIncomeOverThreshold'
-  | 'publicPensionOverThreshold'
-  | 'businessOrMiscIncome'
-  | 'realEstateIncome'
-  | 'reportedInvestmentIncome'
-  | 'medicalExpensesDeduction';
+export interface OneStopEligibilityInputs {
+  hasTaxableTemporaryIncome: boolean;
+  hasEmploymentIncome: boolean;
+  grossEmploymentIncome: number;
+  netEmploymentIncome: number;
+  grossPublicPensionIncome: number;
+  netPublicPensionIncome: number;
+  netBusinessAndMiscIncome: number;
+  businessBlueFilerDeduction: number;
+  hasRealEstateIncome: boolean;
+  incomeStreams: readonly IncomeStream[];
+  hasReportedInvestmentIncome: boolean;
+  additionalDeductionItems: readonly AdditionalDeductionItem[];
+  dcPlanContributions: number;
+  familyNationalPension: number;
+  homeLoanCreditAmount: number;
+  homeLoanMoveInYear: number | undefined;
+  incomeYear: number;
+  hasForeignTaxCredit: boolean;
+  hasHighIncomeMinimumTax: boolean;
+}
 
 /**
- * Returns known reasons why the One-Stop Exception system (ワンストップ特例制度) cannot be used
- * based on {@link TakeHomeResults}, because filing an income or residence tax return is required
- * (Local Tax Act Supplementary Provisions Art. 7(1) / 地方税法附則第7条第1項; Income Tax Act
- * Arts. 120, 121, 73 / 所得税法第120条・第121条・第73条; Local Tax Act Art. 45-2 / 地方税法第45条の2).
+ * Evaluates statutory One-Stop Exception (ワンストップ特例制度) disqualifiers from normalized
+ * inputs and baseline computed figures.
  *
- * Returns an empty array when no return-filing trigger is known from the results.
+ * Source: Local Tax Act Suppl. Art. 7(1) & (8); Income Tax Act Arts. 120, 121, 73;
+ * Local Tax Act Arts. 45-2 & 317-2.
  */
-export const getOneStopIneligibilityReasons = (
-  results: TakeHomeResults,
+export const evaluateOneStopIneligibilityReasons = (
+  params: OneStopEligibilityInputs,
 ): OneStopIneligibilityReason[] => {
   const reasons: OneStopIneligibilityReason[] = [];
+  const hasHomeLoanCredit = params.homeLoanCreditAmount > 0;
 
-  if (results.furusatoNozei.temporaryIncomeEffect !== undefined) {
+  if (params.hasTaxableTemporaryIncome) {
     reasons.push('taxableTemporaryIncome');
   }
-  if (results.grossEmploymentIncome > MANDATORY_RETURN_SALARY_THRESHOLD) {
+  if (params.grossEmploymentIncome > MANDATORY_RETURN_SALARY_THRESHOLD) {
     reasons.push('employmentIncomeOverThreshold');
   }
-  if ((results.grossPublicPensionIncome ?? 0) > MANDATORY_RETURN_PENSION_THRESHOLD) {
+  if (params.grossPublicPensionIncome > MANDATORY_RETURN_PENSION_THRESHOLD) {
     reasons.push('publicPensionOverThreshold');
   }
-  if (results.netBusinessAndMiscIncome !== 0 || (results.businessBlueFilerDeduction ?? 0) > 0) {
+  if (params.netBusinessAndMiscIncome !== 0 || params.businessBlueFilerDeduction > 0) {
     reasons.push('businessOrMiscIncome');
   }
-  if (results.realEstate !== undefined) {
+  if (params.hasRealEstateIncome) {
     reasons.push('realEstateIncome');
   }
-  if (results.investmentIncome?.reported !== undefined) {
+  if (
+    params.incomeStreams.some(
+      s => s.type === 'stockCompensation' && s.amount > 0 && s.issuerDomicile === 'foreign',
+    )
+  ) {
+    reasons.push('foreignStockCompensation');
+  }
+  if (
+    params.incomeStreams.some(
+      s => s.type === 'publicPension' && s.amount > 0 && s.payerDomicile === 'foreign',
+    )
+  ) {
+    reasons.push('foreignPublicPension');
+  }
+  // Local Tax Act Suppl. Art. 7(1) disqualifies anyone required to file a residence tax return
+  // for non-donation reasons. Local Tax Act Arts. 45-2(1) & 317-2(1) proviso only exempts
+  // taxpayers with no income outside salary OR no income outside public pension
+  // (給与所得以外の所得又は公的年金等に係る所得以外の所得を有しなかったもの); positive net
+  // income in both categories falls outside the statutory exemption even when ≤ ¥200,000.
+  if (params.netEmploymentIncome > 0 && params.netPublicPensionIncome > 0) {
+    reasons.push('employmentAndPublicPension');
+  }
+  if (
+    !params.hasEmploymentIncome &&
+    params.grossPublicPensionIncome > 0 &&
+    (params.dcPlanContributions > 0 ||
+      params.additionalDeductionItems.some(
+        item => item.key === 'lifeInsurance' || item.key === 'earthquakeInsurance',
+      ) ||
+      hasHomeLoanCredit ||
+      params.familyNationalPension > 0)
+  ) {
+    reasons.push('pensionerUnwithheldDeductions');
+  }
+  if (params.hasReportedInvestmentIncome) {
     reasons.push('reportedInvestmentIncome');
   }
-  if (results.additionalDeductions.items.some(item => item.key === 'medical')) {
+  if (params.additionalDeductionItems.some(item => item.key === 'medical')) {
     reasons.push('medicalExpensesDeduction');
+  }
+  if (hasHomeLoanCredit && params.homeLoanMoveInYear === params.incomeYear) {
+    reasons.push('homeLoanFirstYear');
+  }
+  if (params.hasForeignTaxCredit) {
+    reasons.push('foreignTaxCredit');
+  }
+  if (params.hasHighIncomeMinimumTax) {
+    reasons.push('highIncomeMinimumTax');
   }
 
   return reasons;
 };
+
+/**
+ * Returns the engine-evaluated reasons why the One-Stop Exception system (ワンストップ特例制度)
+ * cannot be used for {@link TakeHomeResults}, or an empty array when eligible or when `oneStop`
+ * is absent (e.g. zero donation limit).
+ */
+export const getOneStopIneligibilityReasons = (
+  results: TakeHomeResults,
+): OneStopIneligibilityReason[] =>
+  results.furusatoNozei.oneStop && !results.furusatoNozei.oneStop.eligible
+    ? [...results.furusatoNozei.oneStop.ineligibleReasons]
+    : [];

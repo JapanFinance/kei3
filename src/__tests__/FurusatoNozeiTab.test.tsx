@@ -30,6 +30,10 @@ const mockMinimumTax: HighIncomeMinimumTaxResult = {
   totalAdditionalTax: 2_837_842,
 };
 
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: vi.fn(() => false),
+}));
+
 vi.mock('../components/ui/Tooltips', () => ({
   SimpleTooltip: () => <div data-testid="info-tooltip" />,
   DetailedTooltip: ({
@@ -142,8 +146,11 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     render(<FurusatoNozeiTab results={results} />);
 
     expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
-    expect(screen.getByLabelText('High out-of-pocket cost warning')).toBeInTheDocument();
-    expect(screen.getByTestId('WarningIcon')).toHaveClass('MuiSvgIcon-colorWarning');
+    const warningTooltip = screen.getByLabelText('High out-of-pocket cost warning');
+    expect(warningTooltip).toBeInTheDocument();
+    expect(within(warningTooltip).getByTestId('WarningIcon')).toHaveClass(
+      'MuiSvgIcon-colorWarning',
+    );
     expect(
       screen.getByText(
         /because the Foreign Tax Credit already reduces Japanese national income tax to ¥0/,
@@ -200,7 +207,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/If eligible.*this issue is avoided by using the One-Stop system/s),
+      screen.getByText(/This issue is avoided by using the One-Stop system/),
     ).toBeInTheDocument();
   });
 
@@ -301,6 +308,10 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
           residenceTax: 4_000,
           total: 22_400,
         },
+        oneStop: {
+          eligible: false,
+          ineligibleReasons: ['taxableTemporaryIncome', 'employmentIncomeOverThreshold'],
+        },
       }),
     });
 
@@ -309,18 +320,25 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     // ¥81,200 donation cost + ¥22,400 temporary income effect = ¥103,600
     expect(screen.getByText('≈ ¥103,600')).toBeInTheDocument();
     expect(screen.getByText('≈ -¥103,600')).toBeInTheDocument();
-    expect(screen.getByText(/changes income tax brackets/)).toBeInTheDocument();
-    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
+    const warningTooltip = screen.getByLabelText('High out-of-pocket cost warning');
+    expect(within(warningTooltip).getByText(/changes income tax brackets/)).toBeInTheDocument();
     expect(
-      screen.getByText(/taxable temporary income from Furusato Nozei return gifts/),
+      within(warningTooltip).getByText(/One-Stop system.*cannot be used/s),
     ).toBeInTheDocument();
-    expect(screen.getByText(/gross employment income exceeding ¥20,000,000/)).toBeInTheDocument();
     expect(
-      screen.getByText(/¥81,200 base donation cost \+ ≈ ¥22,400 gift temporary income effect/),
+      within(warningTooltip).getByText(/taxable temporary income from Furusato Nozei return gifts/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/= ≈ ¥103,600 total/)).toBeInTheDocument();
     expect(
-      screen.queryByText(/This issue is avoided by using the One-Stop system/),
+      within(warningTooltip).getByText(/gross employment income exceeding ¥20,000,000/),
+    ).toBeInTheDocument();
+    expect(
+      within(warningTooltip).getByText(
+        /¥81,200 base donation cost \+ ≈ ¥22,400 gift temporary income effect/,
+      ),
+    ).toBeInTheDocument();
+    expect(within(warningTooltip).getByText(/= ≈ ¥103,600 total/)).toBeInTheDocument();
+    expect(
+      within(warningTooltip).queryByText(/This issue is avoided by using the One-Stop system/),
     ).not.toBeInTheDocument();
   });
 
@@ -332,16 +350,25 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 771_000,
         incomeTaxReduction: 310_000,
         residenceTaxReduction: 458_400,
+        oneStop: {
+          eligible: false,
+          ineligibleReasons: ['employmentIncomeOverThreshold'],
+        },
       }),
     });
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
-    expect(screen.getByText(/gross employment income exceeding ¥20,000,000/)).toBeInTheDocument();
-    expect(screen.queryByText(/adds ≈/)).not.toBeInTheDocument();
+    const warningTooltip = screen.getByLabelText('High out-of-pocket cost warning');
     expect(
-      screen.queryByText(/This issue is avoided by using the One-Stop system/),
+      within(warningTooltip).getByText(/One-Stop system.*cannot be used/s),
+    ).toBeInTheDocument();
+    expect(
+      within(warningTooltip).getByText(/gross employment income exceeding ¥20,000,000/),
+    ).toBeInTheDocument();
+    expect(within(warningTooltip).queryByText(/adds ≈/)).not.toBeInTheDocument();
+    expect(
+      within(warningTooltip).queryByText(/This issue is avoided by using the One-Stop system/),
     ).not.toBeInTheDocument();
   });
 
@@ -354,16 +381,27 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
         limit: 852_000,
         incomeTaxReduction: 0,
         residenceTaxReduction: 750_000,
+        oneStop: {
+          eligible: false,
+          ineligibleReasons: ['employmentIncomeOverThreshold'],
+        },
       }),
     });
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText(/Home Loan Tax Credit already reduces/)).toBeInTheDocument();
-    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
-    expect(screen.getByText(/gross employment income exceeding ¥20,000,000/)).toBeInTheDocument();
+    const warningTooltip = screen.getByLabelText('High out-of-pocket cost warning');
     expect(
-      screen.queryByText(/If eligible.*this issue is avoided by using the One-Stop system/s),
+      within(warningTooltip).getByText(/Home Loan Tax Credit already reduces/),
+    ).toBeInTheDocument();
+    expect(
+      within(warningTooltip).getByText(/One-Stop system.*cannot be used/s),
+    ).toBeInTheDocument();
+    expect(
+      within(warningTooltip).getByText(/gross employment income exceeding ¥20,000,000/),
+    ).toBeInTheDocument();
+    expect(
+      within(warningTooltip).queryByText(/This issue is avoided by using the One-Stop system/),
     ).not.toBeInTheDocument();
   });
 
@@ -566,6 +604,193 @@ describe('FurusatoNozeiTab Gift Temporary Income Effect Disclosure', () => {
     expect(within(details).getByText('¥17,900')).toBeInTheDocument();
     expect(
       screen.getByText(/adding ≈ ¥13,800 in additional tax and social insurance/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('FurusatoNozeiTab One-Stop vs Tax Return Comparison', () => {
+  const makeEligibleBracketShiftResults = (): TakeHomeResults =>
+    makeTakeHomeResults({
+      residenceTax: makeResidenceTaxDetails({
+        cityProportion: percentTo(1)(60),
+        prefecturalProportion: percentTo(1)(40),
+      }),
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 98_000,
+        incomeTaxReduction: 9_800,
+        residenceTaxDonationBasicDeduction: 9_600,
+        residenceTaxSpecialDeduction: 66_800,
+        residenceTaxReduction: 76_400,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 19_605,
+          municipalTaxCredit: 57_602,
+          prefecturalTaxCredit: 38_401,
+          residenceTaxReduction: 96_000,
+        },
+      }),
+    });
+
+  it('renders aligned desktop two-column table with One-Stop and Tax Return breakdowns and collapsible details', () => {
+    render(<FurusatoNozeiTab results={makeEligibleBracketShiftResults()} />);
+
+    expect(screen.getByRole('columnheader', { name: /One-Stop/ })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /Tax Return/ })).toBeInTheDocument();
+
+    const outOfPocketRows = screen.getAllByRole('rowheader', { name: 'Out-of-Pocket Cost' });
+    expect(outOfPocketRows).toHaveLength(2);
+    const costBreakdownOutOfPocketRow = outOfPocketRows[0]!.closest('tr')!;
+    expect(within(costBreakdownOutOfPocketRow).getByText('¥2,000')).toBeInTheDocument();
+    expect(within(costBreakdownOutOfPocketRow).getByText('¥11,800')).toBeInTheDocument();
+    const effectiveReturnOutOfPocketRow = outOfPocketRows[1]!.closest('tr')!;
+    expect(within(effectiveReturnOutOfPocketRow).getByText('-¥2,000')).toBeInTheDocument();
+    expect(within(effectiveReturnOutOfPocketRow).getByText('-¥11,800')).toBeInTheDocument();
+
+    const netBenefitRow = screen
+      .getByRole('rowheader', { name: 'Net Estimated Benefit' })
+      .closest('tr')!;
+    // Gifts = round(98,000 * 0.265) = 25,970 -> One-Stop net = 23,970; Tax Return net = 14,170
+    expect(within(netBenefitRow).getByText('≈ ¥23,970')).toBeInTheDocument();
+    expect(within(netBenefitRow).getByText('≈ ¥14,170')).toBeInTheDocument();
+
+    expect(
+      screen.getByText(/Declaration Special Credit \(申告特例控除 — One-Stop only\):/),
+    ).toBeInTheDocument();
+
+    const residenceToggle = screen.getByRole('button', { name: /Residence Tax Reduction/ });
+    expect(residenceToggle).not.toHaveAttribute('aria-controls');
+    fireEvent.click(residenceToggle);
+    expect(residenceToggle).toHaveAttribute('aria-controls');
+    const details = document.getElementById(residenceToggle.getAttribute('aria-controls')!)!;
+    expect(within(details).getByText('-¥57,602')).toBeInTheDocument();
+    expect(within(details).getByText('-¥45,840')).toBeInTheDocument();
+  });
+
+  it('switches active column via compact Filing Method toggle with out-of-pocket previews', () => {
+    render(<FurusatoNozeiTab results={makeEligibleBracketShiftResults()} />);
+
+    const oneStopBtn = screen.getByRole('button', {
+      name: /One-Stop.*Cost: ¥2,000/,
+      hidden: true,
+    });
+    const taxReturnBtn = screen.getByRole('button', {
+      name: /Tax Return.*Cost: ¥11,800/,
+      hidden: true,
+    });
+    const table = screen.getByRole('columnheader', { name: /One-Stop/ }).closest('table')!;
+    expect(oneStopBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(taxReturnBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(table).toHaveAttribute('data-mobile-method', 'oneStop');
+
+    fireEvent.click(taxReturnBtn);
+    expect(taxReturnBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(oneStopBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(table).toHaveAttribute('data-mobile-method', 'taxReturn');
+  });
+
+  it('defaults the compact Filing Method toggle to Tax Return when One-Stop is more expensive', () => {
+    const results = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 50_000,
+        incomeTaxReduction: 8_000,
+        residenceTaxReduction: 40_000,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 5_000,
+          municipalTaxCredit: 27_000,
+          prefecturalTaxCredit: 18_000,
+          residenceTaxReduction: 40_000,
+        },
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    const oneStopBtn = screen.getByRole('button', {
+      name: /One-Stop.*Cost: ¥10,000/,
+      hidden: true,
+    });
+    const taxReturnBtn = screen.getByRole('button', {
+      name: /Tax Return.*Cost: ¥2,000/,
+      hidden: true,
+    });
+    expect(taxReturnBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(oneStopBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('columnheader', { name: /One-Stop/ }).closest('table')).toHaveAttribute(
+      'data-mobile-method',
+      'taxReturn',
+    );
+  });
+
+  it('disables the One-Stop column and toggle option with tooltip triggers when One-Stop is unavailable', () => {
+    const results = makeTakeHomeResults({
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 98_000,
+        incomeTaxReduction: 9_800,
+        residenceTaxDonationBasicDeduction: 9_600,
+        residenceTaxSpecialDeduction: 66_800,
+        residenceTaxReduction: 76_400,
+        oneStop: {
+          eligible: false,
+          ineligibleReasons: ['medicalExpensesDeduction'],
+        },
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    const oneStopHeader = screen.getByRole('columnheader', { name: /One-Stop/ });
+    expect(oneStopHeader).toBeInTheDocument();
+    expect(within(oneStopHeader).getByText('Unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /Tax Return/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Tax Return required/)).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText('Unavailable').length).toBeGreaterThan(0);
+
+    const oneStopBtn = screen.getByRole('button', {
+      name: /One-Stop.*Unavailable/,
+      hidden: true,
+    });
+    const taxReturnBtn = screen.getByRole('button', {
+      name: /Tax Return.*Cost: ¥11,800/,
+      hidden: true,
+    });
+    expect(oneStopBtn).toBeDisabled();
+    expect(taxReturnBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('columnheader', { name: /One-Stop/ }).closest('table')).toHaveAttribute(
+      'data-mobile-method',
+      'taxReturn',
+    );
+
+    const oneStopTooltip = screen.getAllByLabelText('One-Stop Exception system info')[0]!;
+    expect(within(oneStopTooltip).getByText(/Detected filing triggers:/)).toBeInTheDocument();
+    expect(within(oneStopTooltip).getByText(/medical expenses deduction/)).toBeInTheDocument();
+  });
+
+  it('shows One-Stop exhaustion warning when Home Loan spillover also limits One-Stop credit', () => {
+    const results = makeTakeHomeResults({
+      nationalIncomeTax: 0,
+      homeLoanTaxCredit: mockHomeLoanCredit,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 50_000,
+        incomeTaxReduction: 0,
+        residenceTaxReduction: 40_000,
+        oneStop: {
+          eligible: true,
+          residenceTaxDeclarationSpecialCredit: 5_000,
+          municipalTaxCredit: 27_000,
+          prefecturalTaxCredit: 18_000,
+          residenceTaxReduction: 40_000,
+        },
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(screen.getByLabelText('High One-Stop out-of-pocket cost warning')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Even under the One-Stop system.*leaves insufficient remaining residence tax/s,
+      ),
     ).toBeInTheDocument();
   });
 });
