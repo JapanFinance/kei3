@@ -1354,6 +1354,49 @@ export interface FurusatoTemporaryIncomeEffect {
   total: number;
 }
 
+/**
+ * Statutory reasons why the Furusato Nozei One-Stop Exception system (ワンストップ特例制度)
+ * cannot be used for the current tax profile because filing a return is required
+ * (Local Tax Act Suppl. Art. 7(1); Income Tax Act Arts. 120, 121, 73; Local Tax Act Art. 45-2).
+ */
+export type OneStopIneligibilityReason =
+  | 'taxableTemporaryIncome'
+  | 'employmentIncomeOverThreshold'
+  | 'publicPensionOverThreshold'
+  | 'businessOrMiscIncome'
+  | 'realEstateIncome'
+  | 'reportedInvestmentIncome'
+  | 'medicalExpensesDeduction'
+  | 'foreignTaxCredit'
+  | 'highIncomeMinimumTax'
+  | 'homeLoanFirstYear'
+  | 'foreignStockCompensation'
+  | 'foreignPublicPension'
+  | 'employmentAndPublicPension'
+  | 'pensionerUnwithheldDeductions';
+
+/**
+ * Furusato Nozei One-Stop Exception (ワンストップ特例制度) calculation result at the donation
+ * limit, or the detected statutory disqualifiers when filing a tax return is required.
+ */
+export type FurusatoOneStopDetails =
+  | {
+      eligible: true;
+      /** Declaration special credit (申告特例控除額, Local Tax Act Suppl. Arts. 7-2 & 7-3). */
+      residenceTaxDeclarationSpecialCredit: number;
+      /** Municipal residence tax credit (基本控除 + 特例控除 + 申告特例控除, 市町村民税). */
+      municipalTaxCredit: number;
+      /** Prefectural residence tax credit (基本控除 + 特例控除 + 申告特例控除, 道府県民税). */
+      prefecturalTaxCredit: number;
+      /** Effective residence tax reduction realized after ¥100 flooring and 所得割 clamping. */
+      residenceTaxReduction: number;
+    }
+  | {
+      eligible: false;
+      /** Statutory reasons One-Stop Exception cannot be used for this tax profile. */
+      ineligibleReasons: readonly OneStopIneligibilityReason[];
+    };
+
 export interface FurusatoNozeiDetails {
   limit: number;
   incomeTaxReduction: number;
@@ -1361,6 +1404,7 @@ export interface FurusatoNozeiDetails {
   residenceTaxSpecialDeduction: number;
   residenceTaxReduction: number;
   temporaryIncomeEffect?: FurusatoTemporaryIncomeEffect | undefined;
+  oneStop?: FurusatoOneStopDetails | undefined;
 }
 
 export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {

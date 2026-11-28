@@ -161,6 +161,22 @@ export class Rate {
   }
 
   /**
+   * The credit on `amount`, ceiled to whole yen (1円未満の端数切り上げ),
+   * as used for residence-tax donation credits (寄附金税額控除).
+   */
+  ceilOn(amount: number): number {
+    if (import.meta.env.DEV && !(amount >= 0 && Number.isFinite(amount))) {
+      throw new Error(`Amount must be non-negative and finite: ${amount}`);
+    }
+    if (amount === 0 || this.#units === 0) return 0;
+    const product = amount * this.#units;
+    const adjusted = product + this.#scale - 1;
+    return Number.isSafeInteger(adjusted)
+      ? Math.floor(adjusted / this.#scale)
+      : Math.ceil(product / this.#scale);
+  }
+
+  /**
    * This rate divided into `parts` equal parts, exactly: the employees' pension rate of
    * 1000分の183 divided into two is the 9.15% an employee pays of what they and their employer
    * pay together.

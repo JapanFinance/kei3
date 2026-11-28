@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { DECLARATION_SPECIAL_CREDIT_RATIOS } from '../data/furusatoNozei';
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
 import { RECONSTRUCTION_SURTAX_RATE } from '../data/nationalIncomeTaxBrackets';
 import { percentTo, Rate } from '../data/rate';
@@ -632,6 +633,10 @@ export interface FurusatoResidenceCreditDetails {
   prefecture: number;
 }
 
+export interface FurusatoOneStopResidenceCreditDetails extends FurusatoResidenceCreditDetails {
+  declarationSpecialCredit: number;
+}
+
 export interface FurusatoLimitDetails {
   finalLimit: number;
   deductibleDonation: number;
@@ -644,6 +649,11 @@ const ZERO_FURUSATO_RESIDENCE_CREDIT: FurusatoResidenceCreditDetails = {
   residenceTaxSpecialDeduction: 0,
   city: 0,
   prefecture: 0,
+};
+
+const ZERO_FURUSATO_ONE_STOP_RESIDENCE_CREDIT: FurusatoOneStopResidenceCreditDetails = {
+  ...ZERO_FURUSATO_RESIDENCE_CREDIT,
+  declarationSpecialCredit: 0,
 };
 
 /**
@@ -717,42 +727,115 @@ function getFurusatoCapParameters(
   };
 }
 
-function computeFurusatoResidenceCreditFromParams(
+function computeFurusatoBasicAndSpecialParts(
   donationAmount: number,
   residenceTaxDetailsForCap: ResidenceTaxDetails,
   params: FurusatoCapParameters,
-): FurusatoResidenceCreditDetails {
+) {
   const deductibleDonation = Math.max(
     Math.min(donationAmount, params.donationIncomeCeiling) - FURUSATO_OUT_OF_POCKET_COST,
     0,
   );
 
-  const residenceTaxDonationBasicDeduction =
-    DONATION_BASIC_DEDUCTION_RATE.taxOn(deductibleDonation);
+  // Local Tax Act Arts. 314-7(1) (municipal 6%) & 37-2(1) (prefectural 4%), 1円未満切り上げ.
+  const cityBasic = CITY_RESIDENCE_TAX_RATE.ceilOn(deductibleDonation);
+  const prefectureBasic = PREFECTURAL_RESIDENCE_TAX_RATE.ceilOn(deductibleDonation);
+  const residenceTaxDonationBasicDeduction = cityBasic + prefectureBasic;
 
   const unsplitSpecialDeduction = Math.min(
     deductibleDonation * params.specialDeductionRate.toDecimal(),
     params.maxSpecialDeduction,
   );
-  const residenceTaxSpecialDeduction =
-    Math.ceil(unsplitSpecialDeduction * residenceTaxDetailsForCap.cityProportion.toDecimal()) +
-    Math.ceil(
-      unsplitSpecialDeduction * residenceTaxDetailsForCap.prefecturalProportion.toDecimal(),
-    );
-
-  const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
-  const city = Math.ceil(
-    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.cityProportion.toDecimal(),
+  const citySpecial = Math.ceil(
+    unsplitSpecialDeduction * residenceTaxDetailsForCap.cityProportion.toDecimal(),
   );
-  const prefecture = Math.ceil(
-    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.prefecturalProportion.toDecimal(),
+  const prefectureSpecial = Math.ceil(
+    unsplitSpecialDeduction * residenceTaxDetailsForCap.prefecturalProportion.toDecimal(),
   );
+  const residenceTaxSpecialDeduction = citySpecial + prefectureSpecial;
 
   return {
     residenceTaxDonationBasicDeduction,
     residenceTaxSpecialDeduction,
-    city,
-    prefecture,
+    cityBasic,
+    prefectureBasic,
+    citySpecial,
+    prefectureSpecial,
+  };
+}
+
+function computeFurusatoResidenceCreditFromParams(
+  donationAmount: number,
+  residenceTaxDetailsForCap: ResidenceTaxDetails,
+  params: FurusatoCapParameters,
+): FurusatoResidenceCreditDetails {
+  const {
+    residenceTaxDonationBasicDeduction,
+    residenceTaxSpecialDeduction,
+    cityBasic,
+    prefectureBasic,
+    citySpecial,
+    prefectureSpecial,
+  } = computeFurusatoBasicAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
+
+  return {
+    residenceTaxDonationBasicDeduction,
+    residenceTaxSpecialDeduction,
+    city: cityBasic + citySpecial,
+    prefecture: prefectureBasic + prefectureSpecial,
+  };
+}
+
+/**
+ * Calculates the residence tax credits (basic, special, and declaration special credits) under
+ * the Furusato Nozei One-Stop Exception system (ワンストップ特例制度).
+ *
+ * Statutory basis: Local Tax Act Supplementary Provisions Arts. 7-2(1)-(2), (4)-(5) and 7-3.
+ * Each side's 申告特例控除額 equals that side's 特例控除額 multiplied by the statutory ratio
+ * and ceiled to whole yen (1円未満切り上げ).
+ *
+ * @see computeFurusatoBasicAndSpecialParts
+ * @see getDeclarationSpecialCreditRatio
+ */
+export function calculateFurusatoOneStopResidenceCredit(
+  donationAmount: number,
+  residenceTaxDetailsForCap: ResidenceTaxDetails,
+  year: number,
+  nationalBasicDeduction: number,
+): FurusatoOneStopResidenceCreditDetails {
+  if (donationAmount <= FURUSATO_OUT_OF_POCKET_COST) {
+    return ZERO_FURUSATO_ONE_STOP_RESIDENCE_CREDIT;
+  }
+
+  const params = getFurusatoCapParameters(residenceTaxDetailsForCap, year, nationalBasicDeduction);
+  if (!params) {
+    return ZERO_FURUSATO_ONE_STOP_RESIDENCE_CREDIT;
+  }
+
+  const {
+    residenceTaxDonationBasicDeduction,
+    residenceTaxSpecialDeduction,
+    cityBasic,
+    prefectureBasic,
+    citySpecial,
+    prefectureSpecial,
+  } = computeFurusatoBasicAndSpecialParts(donationAmount, residenceTaxDetailsForCap, params);
+
+  const ratio = getDeclarationSpecialCreditRatio(
+    residenceTaxDetailsForCap.taxableIncome,
+    residenceTaxDetailsForCap.personalDeductionDifference,
+    nationalBasicDeduction,
+  );
+  const cityDeclarationSpecial = ratio.ceilOn(citySpecial);
+  const prefectureDeclarationSpecial = ratio.ceilOn(prefectureSpecial);
+  const declarationSpecialCredit = cityDeclarationSpecial + prefectureDeclarationSpecial;
+
+  return {
+    residenceTaxDonationBasicDeduction,
+    residenceTaxSpecialDeduction,
+    declarationSpecialCredit,
+    city: cityBasic + citySpecial + cityDeclarationSpecial,
+    prefecture: prefectureBasic + prefectureSpecial + prefectureDeclarationSpecial,
   };
 }
 
@@ -936,4 +1019,29 @@ export function getSpecialDeductionMultiplier(
   const totalIncomeTaxRate = incomeTaxRate.plus(surtax);
 
   return ONE_HUNDRED_PERCENT.minus(DONATION_BASIC_DEDUCTION_RATE).minus(totalIncomeTaxRate);
+}
+
+/**
+ * Returns the 申告特例控除割合 applied to each side's 特例控除額 under the Furusato Nozei
+ * One-Stop Exception system (Local Tax Act Supplementary Provisions Arts. 7-2 & 7-3).
+ *
+ * Uses the same `adjustedTaxableIncome` as {@link getSpecialDeductionMultiplier}.
+ * @see DECLARATION_SPECIAL_CREDIT_RATIOS
+ */
+export function getDeclarationSpecialCreditRatio(
+  taxableIncome: number,
+  personalDeductionDifference: number,
+  nationalBasicDeduction: number,
+): Rate {
+  const adjustedTaxableIncome = calculateFurusatoAdjustedTaxableIncome(
+    taxableIncome,
+    personalDeductionDifference,
+    nationalBasicDeduction,
+  );
+  for (const band of DECLARATION_SPECIAL_CREDIT_RATIOS) {
+    if (adjustedTaxableIncome <= band.maxAdjustedTaxableIncomeInclusive) {
+      return band.ratio;
+    }
+  }
+  return DECLARATION_SPECIAL_CREDIT_RATIOS[DECLARATION_SPECIAL_CREDIT_RATIOS.length - 1]!.ratio;
 }

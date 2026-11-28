@@ -10,7 +10,11 @@ import Typography from '@mui/material/Typography';
 import React from 'react';
 
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
-import { getFurusatoOutOfPocketCost, isHighOutOfPocketCost } from '../../utils/furusatoNozei';
+import {
+  getFurusatoOneStopOutOfPocketCost,
+  getFurusatoOutOfPocketCost,
+  isHighOutOfPocketCost,
+} from '../../utils/furusatoNozei';
 import { useLoadMilestone } from '../../utils/loadMilestones';
 import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';
@@ -80,18 +84,31 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
 
   const [currentTab, setCurrentTab] = React.useState(0);
 
-  const highOutOfPocketCost = isHighOutOfPocketCost(
+  const highTaxReturnOutOfPocket = isHighOutOfPocketCost(
     getFurusatoOutOfPocketCost(results.furusatoNozei),
   );
+  const oneStopOutOfPocket = getFurusatoOneStopOutOfPocketCost(results.furusatoNozei);
+  const highOneStopOutOfPocket =
+    oneStopOutOfPocket !== undefined && isHighOutOfPocketCost(oneStopOutOfPocket);
+  const oneStopEligible = results.furusatoNozei.oneStop?.eligible === true;
+  const oneStopAvoidsHighCost =
+    oneStopEligible && highTaxReturnOutOfPocket && !highOneStopOutOfPocket;
+  const taxReturnAvoidsHighCost =
+    oneStopEligible && highOneStopOutOfPocket && !highTaxReturnOutOfPocket;
+  const highOutOfPocketCost = highTaxReturnOutOfPocket || highOneStopOutOfPocket;
   const hasTemporaryIncomeEffect = (results.furusatoNozei.temporaryIncomeEffect?.total ?? 0) !== 0;
   const furusatoWarningTitle =
     highOutOfPocketCost && hasTemporaryIncomeEffect
       ? 'High out-of-pocket cost and estimated taxable temporary income'
-      : highOutOfPocketCost
-        ? 'High out-of-pocket cost'
-        : hasTemporaryIncomeEffect
-          ? 'Estimated taxable temporary income'
-          : undefined;
+      : oneStopAvoidsHighCost
+        ? 'High out-of-pocket cost when filing a tax return'
+        : taxReturnAvoidsHighCost
+          ? 'High out-of-pocket cost when using One-Stop'
+          : highOutOfPocketCost
+            ? 'High out-of-pocket cost'
+            : hasTemporaryIncomeEffect
+              ? 'Estimated taxable temporary income'
+              : undefined;
   const furusatoWarning = furusatoWarningTitle !== undefined;
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {

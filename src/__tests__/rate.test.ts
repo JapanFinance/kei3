@@ -163,4 +163,25 @@ describe('Rate', () => {
       expect(percent0(10).toPercent()).toBe('10.0%');
     });
   });
+
+  describe('ceilOn', () => {
+    it('returns 0 for zero amount or zero rate', () => {
+      const r = Rate.ofUnits(5_105, 84_895);
+
+      expect(r.ceilOn(0)).toBe(0);
+      expect(Rate.ZERO.ceilOn(10_000)).toBe(0);
+    });
+
+    it('returns exact quotient when divisible and ceils any positive remainder to 1 yen', () => {
+      const r = Rate.ofUnits(5_105, 84_895);
+
+      expect(r.ceilOn(84_895)).toBe(5_105);
+      expect(r.ceilOn(1)).toBe(1);
+      expect(r.ceilOn(84_896)).toBe(5_106);
+    });
+
+    it('throws in development for negative amounts', () => {
+      expect(() => percent0(10).ceilOn(-1)).toThrow('Amount must be non-negative and finite');
+    });
+  });
 });
