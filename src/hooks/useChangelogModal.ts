@@ -29,6 +29,8 @@ export function isChangelogHash(hash: string): boolean {
 
 export interface UseChangelogModalReturn {
   isOpen: boolean;
+  /** True once the modal has been opened at least once, keeping exit transitions mounted. */
+  hasOpened: boolean;
   /** Target ISO date from `#changelog-YYYY-MM-DD`, or null when opened generically. */
   targetDate: string | null;
   /** Last viewed date captured before this open session, for highlighting unread entries. */
@@ -55,6 +57,7 @@ export interface UseChangelogModalReturn {
  */
 export function useChangelogModal(): UseChangelogModalReturn {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [previousLastViewedDate, setPreviousLastViewedDate] = useState<string | null>(() =>
     getLastViewedDate(),
@@ -85,6 +88,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
           setPreviousLastViewedDate(getLastViewedDate());
         }
         isOpenRef.current = true;
+        setHasOpened(true);
         setIsOpen(true);
         setTargetDate(parsed.targetDate);
       } else if (isOpenRef.current) {
@@ -106,6 +110,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
       setPreviousLastViewedDate(getLastViewedDate());
     }
     isOpenRef.current = true;
+    setHasOpened(true);
     setIsOpen(true);
     setTargetDate(null);
     // Hide the dot on the click itself so the button responds immediately.
@@ -131,6 +136,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
 
   return {
     isOpen,
+    hasOpened,
     targetDate,
     previousLastViewedDate,
     openModal,

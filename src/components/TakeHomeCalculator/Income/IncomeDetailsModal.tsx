@@ -217,10 +217,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const totalIncome = totalAnnualIncomeFromStreams(streams);
 
   const minimumTaxApplies = useMemo(() => {
-    return calculationInputs
+    return open && calculationInputs
       ? calculateTaxes(calculationInputs).highIncomeMinimumTax !== undefined
       : false;
-  }, [calculationInputs]);
+  }, [open, calculationInputs]);
 
   const checkMinimumTax = useCallback(
     (draftStream: IncomeStream, excludeId?: string) => {

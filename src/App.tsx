@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Box from '@mui/material/Box';
-import { useReducer, useDeferredValue, useMemo, useCallback, Suspense, lazy } from 'react';
+import { useReducer, useDeferredValue, useMemo, useCallback, Suspense } from 'react';
 
 import ChangelogButton from './components/ChangelogButton';
-import ChangelogLoadingDialog from './components/ChangelogLoadingDialog';
+import { ChangelogModal } from './components/deferredModals';
 import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
-import { useChangelogModal, isChangelogHash } from './hooks/useChangelogModal';
+import { useChangelogModal } from './hooks/useChangelogModal';
 import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
 import type { TakeHomeFormState } from './types/tax';
@@ -18,52 +18,16 @@ import {
   EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
 } from './types/tax';
 import { DEFAULT_TAXPAYER_AGE_RANGE } from './types/taxpayerAge';
+import {
+  TakeHomeChart,
+  TakeHomeResultsDisplay,
+  requestChangelogModal,
+  startDeferredLoads,
+} from './utils/deferredModules';
 import { useLoadMilestone } from './utils/loadMilestones';
 import { calculateTaxes } from './utils/taxCalculations';
 
-// Deferred modules load in priority order: results, then chart, then changelog.
-const resultsModulePromise = import('./components/TakeHomeCalculator/TakeHomeResults');
-const TakeHomeResultsDisplay = lazy(() => resultsModulePromise);
-
-// The chart (which pulls in chart.js) loads after the results module so the
-// visible numbers come first; the catch keeps a results load failure from
-// also blocking the chart.
-const chartModulePromise = resultsModulePromise
-  .catch(() => undefined)
-  .then(() => import('./components/TakeHomeCalculator/TakeHomeChart'));
-const TakeHomeChart = lazy(() => chartModulePromise);
-
-// Safari does not implement requestIdleCallback; the timeout arguments bound
-// the wait so the module still loads promptly on a busy page.
-const whenBrowserIdle = () =>
-  new Promise<void>(resolve => {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => resolve(), { timeout: 2000 });
-    } else {
-      setTimeout(resolve, 2000);
-    }
-  });
-
-// Resolved by the first click on the changelog button. Racing it against the
-// wait below means an early click starts the download straight away instead of
-// leaving the visitor waiting out the idle timeout first.
-let changelogRequested = () => {};
-const changelogRequest = new Promise<void>(resolve => {
-  changelogRequested = resolve;
-});
-
-// The changelog is invisible until opened, so it loads once the browser is
-// idle after the chart module — ready before anyone clicks the button without
-// competing with visible content at startup. Deep links to #changelog need the
-// modal immediately and skip the deferral.
-const ChangelogModal = lazy(() =>
-  isChangelogHash(window.location.hash)
-    ? import('./components/ChangelogModal')
-    : Promise.race([
-        chartModulePromise.catch(() => undefined).then(whenBrowserIdle),
-        changelogRequest,
-      ]).then(() => import('./components/ChangelogModal')),
-);
+startDeferredLoads();
 
 function App() {
   useLoadMilestone('app-rendered');
@@ -71,6 +35,7 @@ function App() {
   // Changelog modal management
   const {
     isOpen: isChangelogOpen,
+    hasOpened: hasChangelogOpened,
     targetDate: changelogTargetDate,
     previousLastViewedDate,
     openModal: openChangelog,
@@ -80,7 +45,7 @@ function App() {
   } = useChangelogModal();
 
   const handleOpenChangelog = useCallback(() => {
-    changelogRequested();
+    requestChangelogModal();
     openChangelog();
   }, [openChangelog]);
 
@@ -262,9 +227,7 @@ function App() {
         </Box>
 
         {/* Changelog Modal */}
-        <Suspense
-          fallback={isChangelogOpen ? <ChangelogLoadingDialog onClose={closeChangelog} /> : null}
-        >
+        {(hasChangelogOpened || isChangelogOpen) && (
           <ChangelogModal
             open={isChangelogOpen}
             onClose={closeChangelog}
@@ -272,7 +235,7 @@ function App() {
             previousLastViewedDate={previousLastViewedDate}
             targetDate={changelogTargetDate}
           />
-        </Suspense>
+        )}
       </Box>
     </Box>
   );
